@@ -1,0 +1,48 @@
+# Node
+node_modules/
+backend/node_modules/
+
+# Python
+venv/
+backend/venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Env
+.env
+
+# Temp files
+temp.jpg
+uploads/
+
+# Build
+dist/
+build/
+
+
+
+
+# Frontend
+Smart Waste Monitoring Interface/node_modules/
+
+# Backend
+backend/node_modules/
+
+# Python
+venv/
+backend/venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Environment
+.env
+
+# Build files
+dist/
+build/
+
+# Temp files
+temp.jpg
+uploads/
