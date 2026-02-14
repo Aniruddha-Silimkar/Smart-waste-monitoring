@@ -529,7 +529,7 @@ type Dustbin = {
   id: number;
   lat: number;
   lng: number;
-  level: "empty" | "half" | "full";
+  level: "empty" | "half" | "half-full" | "full" | "overflowing";
   percentage: number;
   updatedAt: string;
 };
@@ -538,61 +538,6 @@ const VJTIMap: React.FC = () => {
   const [bins, setBins] = useState<Dustbin[]>([]);
   const [selectedBin, setSelectedBin] = useState<Dustbin | null>(null);
 
-  // Fetch data (dummy for now)
-  // const fetchBins = () => {
-  //   const dummyData: Dustbin[] = [
-  //     {
-  //       id: 1,
-  //       lat: 19.0222,
-  //       lng: 72.8561,
-  //       level: "empty",
-  //       percentage: 5,
-  //       updatedAt: "2 hours ago",
-  //     },
-  //     {
-  //       id: 2,
-  //       lat: 19.0217,
-  //       lng: 72.8556,
-  //       level: "half",
-  //       percentage: 65,
-  //       updatedAt: "3 hours ago",
-  //     },
-  //     {
-  //       id: 3,
-  //       lat: 19.0197,
-  //       lng: 72.8559,
-  //       level: "full",
-  //       percentage: 92,
-  //       updatedAt: "6 hours ago",
-  //     },
-  //     {
-  //       id: 4,
-  //       lat: 19.0209,
-  //       lng: 72.8560,
-  //       level: "empty",
-  //       percentage: 10,
-  //       updatedAt: "5 hours ago",
-  //     },
-  //     {
-  //       id: 5,
-  //       lat: 19.0226,
-  //       lng: 72.8564,
-  //       level: "full",
-  //       percentage: 88,
-  //       updatedAt: "1 hour ago",
-  //     },
-  //     {
-  //       id: 6,
-  //       lat: 19.0239,
-  //       lng: 72.8568,
-  //       level: "half",
-  //       percentage: 55,
-  //       updatedAt: "4 hours ago",
-  //     },
-  //   ];
-
-  //   setBins(dummyData);
-  // };
 
   const fetchBins = async () => {
   try {
@@ -604,44 +549,37 @@ const VJTIMap: React.FC = () => {
   }
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  // Load + auto refresh
 useEffect(() => {
   fetchBins();
-  const interval = setInterval(fetchBins, 20000);
-  return () => clearInterval(interval);
+
+  const handleUpdate = () => {
+    fetchBins();
+  };
+
+  window.addEventListener("dustbin-updated", handleUpdate);
+
+  return () => {
+    window.removeEventListener("dustbin-updated", handleUpdate);
+  };
 }, []);
 
 
+
+
+
+
+
   // Marker color
-  const getIcon = (level: string) => {
-    if (level === "full") {
-      return "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
-    }
-    if (level === "half") {
-      return "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
-    }
-    return "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
-  };
+const getIcon = (level: string) => {
+  if (level === "full" || level === "overflowing") {
+    return "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
+  }
+  if (level === "half" || level === "half-full") {
+    return "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
+  }
+  return "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
+};
+
 
   // Format DB number
   const formatId = (id: number) => {
@@ -700,8 +638,9 @@ useEffect(() => {
           <h3>Recent Dustbin Activity</h3>
 
           {bins.map((bin) => {
-            const isFull = bin.level === "full";
-            const isHalf = bin.level === "half";
+          const isFull = bin.level === "full" || bin.level === "overflowing";
+          const isHalf = bin.level === "half" || bin.level === "half-full";
+
 
             const iconBg = isFull
               ? "#f44336"

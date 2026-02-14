@@ -138,3 +138,7 @@ app.post("/update-dustbin", async (req, res) => {
 app.listen(5000, () => {
   console.log("Server running on port 5000");
 });
+
+
+const uploadRoute = require("./routes/upload");
+app.use("/upload", uploadRoute);
