@@ -6,13 +6,19 @@ const FormData = require("form-data");
 const fs = require("fs");
 
 const Dustbin = require("../models/Dustbin");
+const DustbinHistory = require("../models/DustbinHistory");
 
 const upload = multer({ dest: "uploads/" });
 
 router.post("/", upload.single("image"), async (req, res) => {
   try {
     const { dustbinId } = req.body;
+    const parsedDustbinId = Number(dustbinId);
     const filePath = req.file.path;
+
+    if (!parsedDustbinId || Number.isNaN(parsedDustbinId)) {
+      return res.status(400).json({ error: "Valid dustbinId is required" });
+    }
 
     // Send image to Python API
     const form = new FormData();
@@ -28,7 +34,7 @@ router.post("/", upload.single("image"), async (req, res) => {
 
     // Update MongoDB
     const updated = await Dustbin.findOneAndUpdate(
-      { id: dustbinId },
+      { id: parsedDustbinId },
       {
         level,
         percentage,
@@ -36,6 +42,18 @@ router.post("/", upload.single("image"), async (req, res) => {
       },
       { new: true }
     );
+
+    if (!updated) {
+      fs.unlinkSync(filePath);
+      return res.status(404).json({ error: "Dustbin not found" });
+    }
+
+    await DustbinHistory.create({
+      dustbinId: parsedDustbinId,
+      level,
+      percentage,
+      source: "upload",
+    });
 
     // Delete temp file
     fs.unlinkSync(filePath);

@@ -75,6 +75,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+require("dotenv").config();
 
 const app = express();
 app.use(cors());
@@ -82,10 +83,13 @@ app.use(express.json());
 
 // Import Model
 const Dustbin = require("./models/Dustbin");
+const DustbinHistory = require("./models/DustbinHistory");
+const authRoute = require("./routes/auth");
+const uploadRoute = require("./routes/upload");
 
 // MongoDB Connection
 mongoose.connect(
-  "mongodb+srv://admin:1234@cluster0.3cniunt.mongodb.net/smartbin?retryWrites=true&w=majority"
+  process.env.MONGO_URI || "mongodb+srv://admin:1234@cluster0.3cniunt.mongodb.net/smartbin?retryWrites=true&w=majority"
 )
 .then(() => console.log("MongoDB Connected"))
 .catch((err) => console.log(err));
@@ -97,6 +101,9 @@ mongoose.connect(
 app.get("/", (req, res) => {
   res.send("Backend running");
 });
+
+app.use("/auth", authRoute);
+app.use("/upload", uploadRoute);
 
 // Get all dustbins
 app.get("/dustbins", async (req, res) => {
@@ -111,13 +118,23 @@ app.get("/dustbins", async (req, res) => {
 // Update dustbin status
 app.post("/update-dustbin", async (req, res) => {
   const { id, level, percentage } = req.body;
+  const parsedId = Number(id);
+  const parsedPercentage = Number(percentage);
+
+  if (!parsedId || Number.isNaN(parsedId)) {
+    return res.status(400).json({ error: "Valid dustbin id is required" });
+  }
+
+  if (Number.isNaN(parsedPercentage)) {
+    return res.status(400).json({ error: "Valid percentage is required" });
+  }
 
   try {
     const bin = await Dustbin.findOneAndUpdate(
-      { id: id },
+      { id: parsedId },
       {
         level: level,
-        percentage: percentage,
+        percentage: parsedPercentage,
         updatedAt: "Just now",
       },
       { new: true }
@@ -127,18 +144,148 @@ app.post("/update-dustbin", async (req, res) => {
       return res.status(404).json({ message: "Dustbin not found" });
     }
 
+    await DustbinHistory.create({
+      dustbinId: parsedId,
+      level: level || "unknown",
+      percentage: parsedPercentage,
+      source: "manual",
+    });
+
     res.json(bin);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
+app.get("/dashboard-stats", async (req, res) => {
+  try {
+    const [bins, history] = await Promise.all([
+      Dustbin.find().lean(),
+      DustbinHistory.find().sort({ createdAt: -1 }).lean(),
+    ]);
 
-// ---------------- START SERVER ---------------- //
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
+    const totalDustbins = bins.length;
+    const avgFillLevel = totalDustbins
+      ? Math.round(bins.reduce((sum, bin) => sum + (Number(bin.percentage) || 0), 0) / totalDustbins)
+      : 0;
+    const needAttention = bins.filter((bin) => (Number(bin.percentage) || 0) >= 70).length;
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const collectionsToday = history.filter((entry) => {
+      const createdAt = new Date(entry.createdAt);
+      return createdAt >= startOfToday && (Number(entry.percentage) || 0) <= 20;
+    }).length;
+
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const fillLevelTrend = [];
+    const trendMap = new Map();
+    for (let i = 6; i >= 0; i -= 1) {
+      const day = new Date(now);
+      day.setHours(0, 0, 0, 0);
+      day.setDate(now.getDate() - i);
+      const key = day.toISOString().slice(0, 10);
+      trendMap.set(key, {
+        date: `${dayNames[day.getDay()]} ${day.getDate()}`,
+        sum: 0,
+        count: 0,
+      });
+    }
+
+    history.forEach((entry) => {
+      const date = new Date(entry.createdAt);
+      const key = date.toISOString().slice(0, 10);
+      if (!trendMap.has(key)) return;
+
+      const bucket = trendMap.get(key);
+      bucket.sum += Number(entry.percentage) || 0;
+      bucket.count += 1;
+    });
+
+    trendMap.forEach((value) => {
+      fillLevelTrend.push({
+        date: value.date,
+        level: value.count ? Math.round(value.sum / value.count) : 0,
+      });
+    });
+
+    const weekAgo = new Date(now);
+    weekAgo.setDate(now.getDate() - 7);
+
+    const zoneCounts = {
+      "Zone A": 0,
+      "Zone B": 0,
+      "Zone C": 0,
+      "Zone D": 0,
+    };
+    history.forEach((entry) => {
+      const createdAt = new Date(entry.createdAt);
+      if (createdAt < weekAgo) return;
+
+      const dustbinId = Number(entry.dustbinId) || 0;
+      const mod = ((dustbinId - 1) % 4 + 4) % 4;
+      if (mod === 0) zoneCounts["Zone A"] += 1;
+      if (mod === 1) zoneCounts["Zone B"] += 1;
+      if (mod === 2) zoneCounts["Zone C"] += 1;
+      if (mod === 3) zoneCounts["Zone D"] += 1;
+    });
+    const collectionData = Object.entries(zoneCounts).map(([zone, collections]) => ({ zone, collections }));
+
+    const statusCounts = {
+      Normal: 0,
+      Attention: 0,
+      Critical: 0,
+      Offline: 0,
+    };
+    bins.forEach((bin) => {
+      const pct = Number(bin.percentage) || 0;
+      if (pct >= 90) statusCounts.Critical += 1;
+      else if (pct >= 70) statusCounts.Attention += 1;
+      else statusCounts.Normal += 1;
+    });
+
+    const statusDistribution = [
+      { name: "Normal", value: statusCounts.Normal, color: "#22c55e" },
+      { name: "Attention", value: statusCounts.Attention, color: "#eab308" },
+      { name: "Critical", value: statusCounts.Critical, color: "#ef4444" },
+      { name: "Offline", value: statusCounts.Offline, color: "#94a3b8" },
+    ];
+
+    const recentActivity = history.slice(0, 8).map((entry) => {
+      const pct = Number(entry.percentage) || 0;
+      const status = pct >= 90 ? "critical" : pct >= 70 ? "attention" : "normal";
+      const message = pct >= 90 ? "Critical level" : `${pct}% full`;
+
+      return {
+        dustbinId: `DB-${String(entry.dustbinId).padStart(3, "0")}`,
+        status,
+        message,
+        time: new Date(entry.createdAt).toLocaleString(),
+      };
+    });
+
+    res.json({
+      metrics: {
+        totalDustbins,
+        avgFillLevel,
+        needAttention,
+        collectionsToday,
+      },
+      fillLevelTrend,
+      collectionData,
+      statusDistribution,
+      recentActivity,
+    });
+  } catch (error) {
+    console.error("Dashboard stats error:", error);
+    res.status(500).json({ error: "Failed to load dashboard stats" });
+  }
 });
 
 
-const uploadRoute = require("./routes/upload");
-app.use("/upload", uploadRoute);
+// ---------------- START SERVER ---------------- //
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});

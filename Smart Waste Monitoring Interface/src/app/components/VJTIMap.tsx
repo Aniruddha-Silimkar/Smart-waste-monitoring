@@ -1,529 +1,35 @@
-// import React from "react";
-// import { GoogleMap, LoadScript, Marker } from "@react-google-maps/api";
-
-// const containerStyle = {
-//   width: "100%",
-//   height: "400px",
-// };
-
-// const vjtiLocation = {
-//   lat: 19.0222,
-//   lng: 72.8561,
-// };
-
-// const VJTIMap: React.FC = () => {
-//   return (
-//     <LoadScript
-//       googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string}
-//     >
-//       <GoogleMap
-//         mapContainerStyle={containerStyle}
-//         center={vjtiLocation}
-//         zoom={16}
-//       >
-//         <Marker position={vjtiLocation} />
-//       </GoogleMap>
-//     </LoadScript>
-//   );
-// };
-
-// export default VJTIMap;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import React, { useEffect, useState } from "react";
-// import {
-//   GoogleMap,
-//   LoadScript,
-//   Marker,
-//   InfoWindow,
-// } from "@react-google-maps/api";
-
-// const containerStyle = {
-//   width: "100%",
-//   height: "400px",
-// };
-
-// const vjtiLocation = {
-//   lat: 19.0222,
-//   lng: 72.8561,
-// };
-
-// type Dustbin = {
-//   id: number;
-//   lat: number;
-//   lng: number;
-//   level: "empty" | "half" | "full";
-// };
-
-// const VJTIMap: React.FC = () => {
-//   const [bins, setBins] = useState<Dustbin[]>([]);
-//   const [selectedBin, setSelectedBin] = useState<Dustbin | null>(null);
-
-//   // Fetch data function
-//   const fetchBins = () => {
-//     // Replace this with backend API later
-//     const dummyData: Dustbin[] = [
-//       { id: 1, lat: 19.0222, lng: 72.8561, level: "empty" },
-//       { id: 2, lat: 19.0217, lng: 72.8556, level: "half" },
-//       { id: 3, lat: 19.0197, lng: 72.8559, level: "full" },
-//       { id: 4, lat: 19.0209, lng: 72.8560, level: "empty" },
-//       { id: 5, lat: 19.0226, lng: 72.8564, level: "full" },
-//       { id: 6, lat: 19.0239, lng: 72.8568, level: "full" },
-//     ]; 
-
-//     setBins(dummyData);
-
-//     // Alert if any bin is full
-//     const fullBins = dummyData.filter((bin) => bin.level === "full");
-//     if (fullBins.length > 0) {
-//       console.log("Full bins:", fullBins);
-//       alert(`⚠️ ${fullBins.length} dustbin(s) are FULL!`);
-//     }
-//   };
-
-//   // Initial load + Auto refresh every 20 sec
-//   useEffect(() => {
-//     fetchBins();
-//     const interval = setInterval(fetchBins, 200000);
-//     return () => clearInterval(interval);
-//   }, []);
-
-//   // Marker color
-//   const getIcon = (level: string) => {
-//     if (level === "full") {
-//       return "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
-//     }
-//     if (level === "half") {
-//       return "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
-//     }
-//     return "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
-//   };
-
-//   return (
-//     <LoadScript
-//       googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string}
-//     >
-//       <GoogleMap
-//         mapContainerStyle={containerStyle}
-//         center={vjtiLocation}
-//         zoom={16}
-//       >
-//         {bins.map((bin) => (
-//           <Marker
-//             key={bin.id}
-//             position={{ lat: bin.lat, lng: bin.lng }}
-//             icon={getIcon(bin.level)}
-//             onClick={() => setSelectedBin(bin)}
-//           />
-//         ))}
-
-//         {/* Info Window on click */}
-//         {selectedBin && (
-//           <InfoWindow
-//             position={{ lat: selectedBin.lat, lng: selectedBin.lng }}
-//             onCloseClick={() => setSelectedBin(null)}
-//           >
-//             <div>
-//               <h4>Dustbin #{selectedBin.id}</h4>
-//               <p>
-//                 Status:{" "}
-//                 <b
-//                   style={{
-//                     color:
-//                       selectedBin.level === "full"
-//                         ? "red"
-//                         : selectedBin.level === "half"
-//                         ? "orange"
-//                         : "green",
-//                   }}
-//                 >
-//                   {selectedBin.level.toUpperCase()}
-//                 </b>
-//               </p>
-//             </div>
-//           </InfoWindow>
-//         )}
-//       </GoogleMap>
-
-//       return (
-//   <LoadScript
-//     googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string}
-//   >
-//     <div>
-//       <GoogleMap
-//         mapContainerStyle={containerStyle}
-//         center={vjtiLocation}
-//         zoom={16}
-//       >
-//         {bins.map((bin) => (
-//           <Marker
-//             key={bin.id}
-//             position={{ lat: bin.lat, lng: bin.lng }}
-//             icon={getIcon(bin.level)}
-//             onClick={() => setSelectedBin(bin)}
-//           />
-//         ))}
-
-//         {selectedBin && (
-//           <InfoWindow
-//             position={{ lat: selectedBin.lat, lng: selectedBin.lng }}
-//             onCloseClick={() => setSelectedBin(null)}
-//           >
-//             <div>
-//               <h4>Dustbin #{selectedBin.id}</h4>
-//               <p>Status: {selectedBin.level.toUpperCase()}</p>
-//             </div>
-//           </InfoWindow>
-//         )}
-//       </GoogleMap>
-
-//       {/* -------- Dustbin List Below Map -------- */}
-//       <div style={{ marginTop: "20px" }}>
-//         <h3>Dustbin Status</h3>
-
-//         {bins.map((bin) => (
-//           <div
-//             key={bin.id}
-//             style={{
-//               padding: "10px",
-//               marginBottom: "8px",
-//               border: "1px solid #ddd",
-//               borderRadius: "6px",
-//               display: "flex",
-//               justifyContent: "space-between",
-//               background:
-//                 bin.level === "full"
-//                   ? "#ffe5e5"
-//                   : bin.level === "half"
-//                   ? "#fff8e1"
-//                   : "#e8f5e9",
-//             }}
-//           >
-//             <span>Dustbin #{bin.id}</span>
-
-//             <span
-//               style={{
-//                 fontWeight: "bold",
-//                 color:
-//                   bin.level === "full"
-//                     ? "red"
-//                     : bin.level === "half"
-//                     ? "orange"
-//                     : "green",
-//               }}
-//             >
-//               {bin.level.toUpperCase()}
-//             </span>
-//           </div>
-//         ))}
-//       </div>
-//     </div>
-//   </LoadScript>
-// );
-
-
-
-
-
-//     </LoadScript>
-//   );
-// };
-
-// export default VJTIMap;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import React, { useEffect, useState } from "react";
-// import {
-//   GoogleMap,
-//   LoadScript,
-//   Marker,
-//   InfoWindow,
-// } from "@react-google-maps/api";
-
-// const containerStyle = {
-//   width: "100%",
-//   height: "400px",
-// };
-
-// const vjtiLocation = {
-//   lat: 19.0222,
-//   lng: 72.8561,
-// };
-
-// type Dustbin = {
-//   id: number;
-//   lat: number;
-//   lng: number;
-//   level: "empty" | "half" | "full";
-// };
-
-// const VJTIMap: React.FC = () => {
-//   const [bins, setBins] = useState<Dustbin[]>([]);
-//   const [selectedBin, setSelectedBin] = useState<Dustbin | null>(null);
-
-//   // Fetch dustbin data (dummy for now)
-//   const fetchBins = () => {
-//     const dummyData: Dustbin[] = [
-//       { id: 1, lat: 19.0222, lng: 72.8561, level: "empty" },
-//       { id: 2, lat: 19.0217, lng: 72.8556, level: "half" },
-//       { id: 3, lat: 19.0197, lng: 72.8559, level: "full" },
-//       { id: 4, lat: 19.0209, lng: 72.8560, level: "empty" },
-//       { id: 5, lat: 19.0226, lng: 72.8564, level: "full" },
-//       { id: 6, lat: 19.0239, lng: 72.8568, level: "half" },
-//     ];
-
-//     setBins(dummyData);
-
-//     // Alert if any bin is full
-//     const fullBins = dummyData.filter((bin) => bin.level === "full");
-//     if (fullBins.length > 0) {
-//       console.log("Full bins:", fullBins);
-//     }
-//   };
-
-//   // Initial load + auto refresh every 20 sec
-//   useEffect(() => {
-//     fetchBins();
-//     const interval = setInterval(fetchBins, 20000);
-//     return () => clearInterval(interval);
-//   }, []);
-
-//   // Marker icon color
-//   const getIcon = (level: string) => {
-//     if (level === "full") {
-//       return "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
-//     }
-//     if (level === "half") {
-//       return "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
-//     }
-//     return "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
-//   };
-
-//   return (
-//     <LoadScript
-//       googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string}
-//     >
-//       <div>
-//         {/* -------- Map -------- */}
-//         <GoogleMap
-//           mapContainerStyle={containerStyle}
-//           center={vjtiLocation}
-//           zoom={16}
-//         >
-//           {bins.map((bin) => (
-//             <Marker
-//               key={bin.id}
-//               position={{ lat: bin.lat, lng: bin.lng }}
-//               icon={getIcon(bin.level)}
-//               onClick={() => setSelectedBin(bin)}
-//             />
-//           ))}
-
-//           {/* Info Window */}
-//           {selectedBin && (
-//             <InfoWindow
-//               position={{ lat: selectedBin.lat, lng: selectedBin.lng }}
-//               onCloseClick={() => setSelectedBin(null)}
-//             >
-//               <div>
-//                 <h4>Dustbin #{selectedBin.id}</h4>
-//                 <p>
-//                   Status:{" "}
-//                   <b
-//                     style={{
-//                       color:
-//                         selectedBin.level === "full"
-//                           ? "red"
-//                           : selectedBin.level === "half"
-//                           ? "orange"
-//                           : "green",
-//                     }}
-//                   >
-//                     {selectedBin.level.toUpperCase()}
-//                   </b>
-//                 </p>
-//               </div>
-//             </InfoWindow>
-//           )}
-//         </GoogleMap>
-
-//         {/* -------- List Below Map -------- */}
-//         <div style={{ marginTop: "20px" }}>
-//           <h3>Dustbin Status</h3>
-
-//           {bins.map((bin) => (
-//             <div
-//               key={bin.id}
-//               style={{
-//                 padding: "10px",
-//                 marginBottom: "8px",
-//                 border: "1px solid #ddd",
-//                 borderRadius: "6px",
-//                 display: "flex",
-//                 justifyContent: "space-between",
-//                 background:
-//                   bin.level === "full"
-//                     ? "#ffe5e5"
-//                     : bin.level === "half"
-//                     ? "#fff8e1"
-//                     : "#e8f5e9",
-//               }}
-//             >
-//               <span>Dustbin #{bin.id}</span>
-
-//               <span
-//                 style={{
-//                   fontWeight: "bold",
-//                   color:
-//                     bin.level === "full"
-//                       ? "red"
-//                       : bin.level === "half"
-//                       ? "orange"
-//                       : "green",
-//                 }}
-//               >
-//                 {bin.level.toUpperCase()}
-//               </span>
-//             </div>
-//           ))}
-//         </div>
-//       </div>
-//     </LoadScript>
-//   );
-// };
-
-// export default VJTIMap;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import React, { useEffect, useState } from "react";
-import {
-  GoogleMap,
-  LoadScript,
-  Marker,
-  InfoWindow,
-} from "@react-google-maps/api";
+import { GoogleMap, InfoWindow, LoadScript, Marker, OverlayView, Polyline } from "@react-google-maps/api";
+import { MapPin, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Card } from "./ui/card";
 
 const containerStyle = {
   width: "100%",
-  height: "400px",
+  height: "460px",
 };
 
 const vjtiLocation = {
   lat: 19.0222,
   lng: 72.8561,
 };
+
+const zoneDividerLines = [
+  [
+    { lat: 19.0262, lng: 72.8561 },
+    { lat: 19.0182, lng: 72.8561 },
+  ],
+  [
+    { lat: 19.0222, lng: 72.8523 },
+    { lat: 19.0222, lng: 72.8597 },
+  ],
+];
+
+const zoneLabels = [
+  { name: "Zone A", position: { lat: 19.0242, lng: 72.8542 } },
+  { name: "Zone B", position: { lat: 19.0242, lng: 72.8579 } },
+  { name: "Zone C", position: { lat: 19.0202, lng: 72.8542 } },
+  { name: "Zone D", position: { lat: 19.0202, lng: 72.8579 } },
+];
 
 type Dustbin = {
   id: number;
@@ -538,183 +44,141 @@ const VJTIMap: React.FC = () => {
   const [bins, setBins] = useState<Dustbin[]>([]);
   const [selectedBin, setSelectedBin] = useState<Dustbin | null>(null);
 
-
   const fetchBins = async () => {
-  try {
-    const res = await fetch("http://localhost:5000/dustbins");
-    const data = await res.json();
-    setBins(data);
-  } catch (error) {
-    console.error("Error fetching dustbins:", error);
-  }
-};
+    try {
+      const res = await fetch("http://localhost:5000/dustbins");
+      const data = await res.json();
+      setBins(data);
+    } catch (error) {
+      console.error("Error fetching dustbins:", error);
+    }
+  };
 
-useEffect(() => {
-  fetchBins();
-
-  const handleUpdate = () => {
+  useEffect(() => {
     fetchBins();
+
+    const handleUpdate = () => fetchBins();
+    window.addEventListener("dustbin-updated", handleUpdate);
+
+    return () => {
+      window.removeEventListener("dustbin-updated", handleUpdate);
+    };
+  }, []);
+
+  const getIcon = (level: string) => {
+    if (level === "full" || level === "overflowing") return "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
+    if (level === "half" || level === "half-full") return "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
+    return "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
   };
 
-  window.addEventListener("dustbin-updated", handleUpdate);
-
-  return () => {
-    window.removeEventListener("dustbin-updated", handleUpdate);
-  };
-}, []);
-
-
-
-
-
-
-
-  // Marker color
-const getIcon = (level: string) => {
-  if (level === "full" || level === "overflowing") {
-    return "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
-  }
-  if (level === "half" || level === "half-full") {
-    return "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
-  }
-  return "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
-};
-
-
-  // Format DB number
-  const formatId = (id: number) => {
-    return `DB-${id.toString().padStart(3, "0")}`;
-  };
+  const formatId = (id: number) => `DB-${id.toString().padStart(3, "0")}`;
 
   return (
-    <LoadScript
-      googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string}
-    >
-      <div>
-        {/* -------- Map -------- */}
-        <GoogleMap
-          mapContainerStyle={containerStyle}
-          center={vjtiLocation}
-          zoom={16}
-        >
-          {bins.map((bin) => (
-            <Marker
-              key={bin.id}
-              position={{ lat: bin.lat, lng: bin.lng }}
-              icon={getIcon(bin.level)}
-              onClick={() => setSelectedBin(bin)}
-            />
-          ))}
-
-          {selectedBin && (
-            <InfoWindow
-              position={{ lat: selectedBin.lat, lng: selectedBin.lng }}
-              onCloseClick={() => setSelectedBin(null)}
-            >
-              <div>
-                <h4>{formatId(selectedBin.id)}</h4>
-                <p>
-                  Status:{" "}
-                  <b
-                    style={{
-                      color:
-                        selectedBin.level === "full"
-                          ? "red"
-                          : selectedBin.level === "half"
-                          ? "orange"
-                          : "green",
-                    }}
-                  >
-                    {selectedBin.percentage}% Full
-                  </b>
-                </p>
-              </div>
-            </InfoWindow>
-          )}
-        </GoogleMap>
-
-        {/* -------- Activity List -------- */}
-        <div style={{ marginTop: "20px" }}>
-          <h3>Recent Dustbin Activity</h3>
-
-          {bins.map((bin) => {
-          const isFull = bin.level === "full" || bin.level === "overflowing";
-          const isHalf = bin.level === "half" || bin.level === "half-full";
-
-
-            const iconBg = isFull
-              ? "#f44336"
-              : isHalf
-              ? "#ff9800"
-              : "#4caf50";
-
-            const statusText = isFull
-              ? "Critical Level"
-              : isHalf
-              ? `${bin.percentage}% Full`
-              : "Collected";
-
-            return (
-              <div
-                key={bin.id}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  padding: "12px",
-                  borderBottom: "1px solid #ddd",
-                  background: "#fff",
-                }}
-              >
-                {/* Status Icon */}
-                <div
-                  style={{
-                    width: "36px",
-                    height: "36px",
-                    borderRadius: "50%",
-                    background: iconBg,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "white",
-                    fontWeight: "bold",
-                    marginRight: "12px",
-                    fontSize: "18px",
-                  }}
-                >
-                  {isFull ? "!" : isHalf ? "⚠" : "✓"}
-                </div>
-
-                {/* Text */}
-                <div>
-                  <div style={{ fontWeight: 600 }}>
-                    {formatId(bin.id)} - {statusText}
-                  </div>
-                  <div style={{ fontSize: "12px", color: "#666" }}>
-                    {bin.updatedAt}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+    <Card className="overflow-hidden p-0">
+      <div className="border-b border-slate-100 px-6 py-5">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-emerald-100 p-2.5 text-emerald-700">
+            <MapPin className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900">VJTI Dustbin Live Map</h2>
+            <p className="text-sm text-slate-600">Track fill-level hotspots and recent updates</p>
+          </div>
         </div>
       </div>
-    </LoadScript>
+
+      <div className="p-4 sm:p-6">
+        <div className="overflow-hidden rounded-2xl border border-emerald-100/80 shadow-sm">
+          <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string}>
+            <GoogleMap mapContainerStyle={containerStyle} center={vjtiLocation} zoom={16}>
+              {zoneDividerLines.map((path, index) => (
+                <Polyline
+                  key={`zone-divider-${index}`}
+                  path={path}
+                  options={{
+                    strokeColor: "#0f766e",
+                    strokeOpacity: 0.75,
+                    strokeWeight: 1.5,
+                    clickable: false,
+                    zIndex: 1,
+                  }}
+                />
+              ))}
+
+              {zoneLabels.map((zone) => (
+                <OverlayView
+                  key={zone.name}
+                  position={zone.position}
+                  mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                >
+                  <div className="rounded-md border border-emerald-300/90 bg-white/95 px-2 py-1 text-[11px] font-semibold text-emerald-800 shadow-sm">
+                    {zone.name}
+                  </div>
+                </OverlayView>
+              ))}
+
+              {bins.map((bin) => (
+                <Marker
+                  key={bin.id}
+                  position={{ lat: bin.lat, lng: bin.lng }}
+                  icon={getIcon(bin.level)}
+                  onClick={() => setSelectedBin(bin)}
+                />
+              ))}
+
+              {selectedBin && (
+                <InfoWindow
+                  position={{ lat: selectedBin.lat, lng: selectedBin.lng }}
+                  onCloseClick={() => setSelectedBin(null)}
+                >
+                  <div>
+                    <h4>{formatId(selectedBin.id)}</h4>
+                    <p>
+                      Status: <b>{selectedBin.percentage}% Full</b>
+                    </p>
+                  </div>
+                </InfoWindow>
+              )}
+            </GoogleMap>
+          </LoadScript>
+        </div>
+
+        <div className="mt-5">
+          <p className="mb-3 text-xs text-slate-500">Thin map lines indicate Zone A, B, C, and D boundaries.</p>
+          <h3 className="mb-3 text-lg font-semibold text-slate-900">Recent Dustbin Activity</h3>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {bins.map((bin) => {
+              const isFull = bin.level === "full" || bin.level === "overflowing";
+              const isHalf = bin.level === "half" || bin.level === "half-full";
+
+              const statusText = isFull ? "Critical Level" : isHalf ? `${bin.percentage}% Full` : "Collected";
+              const statusClass = isFull
+                ? "border-rose-100 bg-rose-50/60 text-rose-700"
+                : isHalf
+                  ? "border-amber-100 bg-amber-50/70 text-amber-700"
+                  : "border-emerald-100 bg-emerald-50/70 text-emerald-700";
+
+              return (
+                <div
+                  key={bin.id}
+                  className="flex items-center justify-between rounded-xl border border-slate-100 bg-white/80 px-4 py-3"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">{formatId(bin.id)}</p>
+                    <p className="text-xs text-slate-500">{bin.updatedAt}</p>
+                  </div>
+                  <div className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold ${statusClass}`}>
+                    {isFull || isHalf ? <AlertTriangle className="h-3.5 w-3.5" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
+                    {statusText}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </Card>
   );
 };
 
 export default VJTIMap;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1,127 +1,5 @@
-// import { useState } from 'react';
-// import { Upload, Camera, X } from 'lucide-react';
-// import { Card } from './ui/card';
-// import { Input } from './ui/input';
-// import { Label } from './ui/label';
-// import { Button } from './ui/button';
-// import { toast } from 'sonner';
-
-// export function UploadSection() {
-//   const [imagePreview, setImagePreview] = useState<string | null>(null);
-//   const [dustbinNumber, setDustbinNumber] = useState('');
-
-//   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-//     const file = e.target.files?.[0];
-//     if (file) {
-//       const reader = new FileReader();
-//       reader.onloadend = () => {
-//         setImagePreview(reader.result as string);
-//       };
-//       reader.readAsDataURL(file);
-//     }
-//   };
-
-//   const clearImage = () => {
-//     setImagePreview(null);
-//   };
-
-//   const handleSubmit = () => {
-//     if (!imagePreview || !dustbinNumber) {
-//       toast.error('Please upload an image and enter dustbin number');
-//       return;
-//     }
-//     toast.success(`Analyzing dustbin #${dustbinNumber}...`, {
-//       description: 'AI processing in progress',
-//     });
-//   };
-
-//   return (
-//     <Card className="p-6">
-//       <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-//         <Camera className="h-5 w-5 text-green-600" />
-//         Upload Dustbin Image
-//       </h2>
-      
-//       <div className="space-y-4">
-//         {/* Image Upload Area */}
-//         <div>
-//           <Label htmlFor="dustbin-image" className="text-sm mb-2 block">
-//             Dustbin Photo
-//           </Label>
-//           {imagePreview ? (
-//             <div className="relative">
-//               <img
-//                 src={imagePreview}
-//                 alt="Dustbin preview"
-//                 className="w-full h-64 object-cover rounded-lg border-2 border-green-200"
-//               />
-//               <button
-//                 onClick={clearImage}
-//                 className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition-colors"
-//               >
-//                 <X className="h-4 w-4" />
-//               </button>
-//             </div>
-//           ) : (
-//             <label
-//               htmlFor="dustbin-image"
-//               className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-green-300 rounded-lg cursor-pointer hover:bg-green-50 transition-colors"
-//             >
-//               <Upload className="h-12 w-12 text-green-500 mb-2" />
-//               <p className="text-sm text-gray-600 mb-1">Click to upload dustbin image</p>
-//               <p className="text-xs text-gray-500">PNG, JPG up to 10MB</p>
-//               <input
-//                 id="dustbin-image"
-//                 type="file"
-//                 accept="image/*"
-//                 onChange={handleImageUpload}
-//                 className="hidden"
-//               />
-//             </label>
-//           )}
-//         </div>
-
-//         {/* Dustbin Number Input */}
-//         <div>
-//           <Label htmlFor="dustbin-number" className="text-sm mb-2 block">
-//             Dustbin Number
-//           </Label>
-//           <Input
-//             id="dustbin-number"
-//             type="text"
-//             placeholder="e.g., DB-001"
-//             value={dustbinNumber}
-//             onChange={(e) => setDustbinNumber(e.target.value)}
-//             className="w-full"
-//           />
-//         </div>
-
-//         {/* Submit Button */}
-//         <Button
-//           onClick={handleSubmit}
-//           className="w-full bg-green-600 hover:bg-green-700"
-//         >
-//           Analyze Dustbin
-//         </Button>
-//       </div>
-//     </Card>
-//   );
-// }
-
-
-
-
-
-
-
-
-
-
-
-
-
 import { useState } from "react";
-import { Upload, Camera, X } from "lucide-react";
+import { Upload, Camera, X, Loader2, CircleCheckBig, TriangleAlert } from "lucide-react";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -134,18 +12,14 @@ export function UploadSection() {
   const [dustbinNumber, setDustbinNumber] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Handle image select
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
+    if (!file) return;
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    setSelectedFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setImagePreview(reader.result as string);
+    reader.readAsDataURL(file);
   };
 
   const clearImage = () => {
@@ -153,39 +27,37 @@ export function UploadSection() {
     setSelectedFile(null);
   };
 
-  // Submit to backend
   const handleSubmit = async () => {
     if (!selectedFile || !dustbinNumber) {
       toast.error("Please upload an image and enter dustbin number");
       return;
     }
 
+    let processingToastId: string | number | undefined;
+
     try {
       setLoading(true);
-
-      // toast("Uploading...", {
-      //   description: "Sending image to AI model",
-      // });
-      toast(
-  <div>
-    <div style={{ fontWeight: 600, fontSize: "16px" }}>
-      Uploading...
-    </div>
-    <div style={{ color: "#374151", marginTop: "4px", fontSize: "14px" }}>
-      Sending image to AI model
-    </div>
-  </div>,
-  {
-    style: {
-      background: "#ffffff",
-      padding: "16px",
-      borderRadius: "10px",
-      boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
-    },
-    duration: 2000,
-  }
-);
-
+      processingToastId = toast.loading(
+        <div className="flex items-start gap-3">
+          <Loader2 className="mt-0.5 h-5 w-5 animate-spin text-white" />
+          <div>
+            <p className="text-base font-bold text-white">Processing image...</p>
+            <p className="text-sm text-emerald-100">Sending file to AI model and analyzing fill level</p>
+          </div>
+        </div>,
+        {
+          duration: 12000,
+          style: {
+            background: "linear-gradient(135deg, #0f766e 0%, #0e9f6e 100%)",
+            color: "#ffffff",
+            border: "1px solid rgba(255,255,255,0.25)",
+            padding: "16px",
+            borderRadius: "14px",
+            boxShadow: "0 16px 30px -14px rgba(0, 59, 46, 0.85)",
+            minWidth: "350px",
+          },
+        },
+      );
 
       const formData = new FormData();
       formData.append("image", selectedFile);
@@ -195,81 +67,96 @@ export function UploadSection() {
         method: "POST",
         body: formData,
       });
-
       const result = await response.json();
 
       if (!response.ok) {
         throw new Error(result.error || "Upload failed");
       }
 
-      // toast.success(`Dustbin ${dustbinNumber} Updated`, {
-      //   description: `Status: ${result.data.level.toUpperCase()} (${result.data.percentage}%)`,
-      // });
-
       toast.success(
-  <div>
-    <div style={{ fontSize: "18px", fontWeight: 700 }}>
-      Dustbin {dustbinNumber} Updated
-    </div>
-    <div style={{ fontSize: "14px", marginTop: "4px" }}>
-      Status: {result.data.level.toUpperCase()} ({result.data.percentage}%)
-    </div>
-  </div>,
-  {
-    style: {
-      background: "#16a34a",
-      color: "#fff",
-      padding: "16px",
-      borderRadius: "10px",
-      boxShadow: "0 6px 20px rgba(0,0,0,0.2)"
-    },
-    duration: 4000
-  }
-);
-
-
+        <div className="flex items-start gap-3">
+          <CircleCheckBig className="mt-0.5 h-5 w-5 text-white" />
+          <div>
+            <p className="text-base font-bold text-white">Dustbin {dustbinNumber} updated</p>
+            <p className="text-sm text-emerald-100">
+              Status: {result.data.level.toUpperCase()} ({result.data.percentage}%)
+            </p>
+          </div>
+        </div>,
+        {
+          id: processingToastId,
+          duration: 5500,
+          style: {
+            background: "linear-gradient(135deg, #047857 0%, #059669 100%)",
+            color: "#ffffff",
+            border: "1px solid rgba(255,255,255,0.28)",
+            padding: "16px",
+            borderRadius: "14px",
+            boxShadow: "0 16px 30px -14px rgba(0, 59, 46, 0.85)",
+            minWidth: "350px",
+          },
+        },
+      );
 
       window.dispatchEvent(new Event("dustbin-updated"));
-
-
-      // Reset
-      setImagePreview(null);
-      setSelectedFile(null);
+      clearImage();
       setDustbinNumber("");
     } catch (error) {
       console.error(error);
-      toast.error("Upload failed", {
-        description: "Check backend or Python server",
-      });
+      toast.error(
+        <div className="flex items-start gap-3">
+          <TriangleAlert className="mt-0.5 h-5 w-5 text-white" />
+          <div>
+            <p className="text-base font-bold text-white">Upload failed</p>
+            <p className="text-sm text-rose-100">Check backend and Python model server</p>
+          </div>
+        </div>,
+        {
+          duration: 6000,
+          style: {
+            background: "linear-gradient(135deg, #be123c 0%, #e11d48 100%)",
+            color: "#ffffff",
+            border: "1px solid rgba(255,255,255,0.25)",
+            padding: "16px",
+            borderRadius: "14px",
+            boxShadow: "0 16px 30px -14px rgba(136, 19, 55, 0.8)",
+            minWidth: "350px",
+          },
+        },
+      );
+      if (processingToastId !== undefined) {
+        toast.dismiss(processingToastId);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <Card className="p-6">
-      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-        <Camera className="h-5 w-5 text-green-600" />
-        Upload Dustbin Image
-      </h2>
-
-      <div className="space-y-4">
-        {/* Image Upload */}
+    <Card className="border-emerald-100/70 bg-white/86 p-6 sm:p-7">
+      <div className="mb-5 flex items-center gap-3">
+        <div className="rounded-xl bg-emerald-100 p-2.5 text-emerald-700">
+          <Camera className="h-5 w-5" />
+        </div>
         <div>
-          <Label htmlFor="dustbin-image" className="text-sm mb-2 block">
+          <h2 className="text-xl font-semibold text-slate-900">Upload Dustbin Image</h2>
+          <p className="text-sm text-slate-600">Add a fresh dustbin image to update fill status</p>
+        </div>
+      </div>
+
+      <div className="space-y-5">
+        <div>
+          <Label htmlFor="dustbin-image" className="mb-2 block text-sm text-slate-700">
             Dustbin Photo
           </Label>
 
           {imagePreview ? (
-            <div className="relative">
-              <img
-                src={imagePreview}
-                alt="Dustbin preview"
-                className="w-full h-64 object-cover rounded-lg border-2 border-green-200"
-              />
+            <div className="relative overflow-hidden rounded-2xl border border-emerald-100 shadow-sm">
+              <img src={imagePreview} alt="Dustbin preview" className="h-64 w-full object-cover sm:h-72" />
               <button
                 onClick={clearImage}
-                className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                className="absolute right-3 top-3 rounded-full bg-slate-900/70 p-2 text-white transition hover:bg-slate-900"
+                aria-label="Remove selected image"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -277,10 +164,13 @@ export function UploadSection() {
           ) : (
             <label
               htmlFor="dustbin-image"
-              className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-green-300 rounded-lg cursor-pointer hover:bg-green-50"
+              className="group flex h-64 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/40 p-6 text-center transition hover:border-emerald-400 hover:bg-emerald-50"
             >
-              <Upload className="h-12 w-12 text-green-500 mb-2" />
-              <p className="text-sm text-gray-600">Click to upload image</p>
+              <div className="mb-3 rounded-2xl bg-emerald-100 p-3 text-emerald-700 transition group-hover:bg-emerald-200">
+                <Upload className="h-7 w-7" />
+              </div>
+              <p className="text-sm font-semibold text-slate-900">Click to upload an image</p>
+              <p className="mt-1 text-xs text-slate-500">PNG, JPG up to 10MB</p>
               <input
                 id="dustbin-image"
                 type="file"
@@ -292,9 +182,8 @@ export function UploadSection() {
           )}
         </div>
 
-        {/* Dustbin ID */}
         <div>
-          <Label htmlFor="dustbin-number" className="text-sm mb-2 block">
+          <Label htmlFor="dustbin-number" className="mb-2 block text-sm text-slate-700">
             Dustbin ID
           </Label>
           <Input
@@ -303,63 +192,14 @@ export function UploadSection() {
             placeholder="Enter Dustbin ID (e.g., 3)"
             value={dustbinNumber}
             onChange={(e) => setDustbinNumber(e.target.value)}
+            className="h-11 border-emerald-100 bg-white"
           />
         </div>
 
-        {/* Submit */}
-        <Button
-          onClick={handleSubmit}
-          disabled={loading}
-          className="w-full bg-green-600 hover:bg-green-700"
-        >
+        <Button onClick={handleSubmit} disabled={loading} className="h-11 w-full text-sm">
           {loading ? "Analyzing..." : "Analyze Dustbin"}
         </Button>
       </div>
     </Card>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
