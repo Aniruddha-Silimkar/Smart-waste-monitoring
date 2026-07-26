@@ -28,7 +28,7 @@ module.exports = {
     .map((server) => server.trim())
     .filter(Boolean),
   jwtSecret: getProductionRequiredEnv("JWT_SECRET", "local_dev_jwt_secret"),
-  modelApiUrl: getOptionalEnv("MODEL_API_URL", "http://127.0.0.1:5001/predict"),
+  modelApiUrl: getOptionalEnv("MODEL_API_URL", isProduction ? "https://smartwaste-python.onrender.com/predict" : "http://127.0.0.1:5001/predict"),
   mongoUri: getRequiredEnv("MONGO_URI"),
   port: getOptionalEnv("PORT", "5000"),
 };
