@@ -54,7 +54,13 @@ router.post("/", upload.single("image"), async (req, res) => {
     }
 
     const mongoose = require("mongoose");
-    const isMongoConnected = () => mongoose.connection.readyState === 1;
+    if (mongoose.connection.readyState !== 1) {
+      try {
+        await mongoose.connect(config.mongoUri, { serverSelectionTimeoutMS: 5000 });
+      } catch (connErr) {
+        console.warn("MongoDB reconnect notice:", connErr.message);
+      }
+    }
 
     let updated = {
       id: parsedDustbinId,
@@ -63,14 +69,6 @@ router.post("/", upload.single("image"), async (req, res) => {
       level,
       percentage,
       updatedAt: "Just now",
-    };
-
-    let previousBin = {
-      id: parsedDustbinId,
-      lat: 19.0222,
-      lng: 72.8561,
-      level: "empty",
-      percentage: 0,
     };
 
     let previousBin = {
