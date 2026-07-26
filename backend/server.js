@@ -224,17 +224,21 @@ async function getCurrentAdminNotifications(limit) {
   };
 }
 
-// // Get all dustbins
+const memoryStore = require("./utils/memoryStore");
+
+// Get all dustbins
 app.get("/dustbins", async (req, res) => {
   try {
-    let bins = await Dustbin.find().lean();
-    if (!bins || bins.length === 0) {
-      bins = defaultBins;
+    if (mongoose.connection.readyState === 1) {
+      const bins = await Dustbin.find().lean();
+      if (bins && bins.length > 0) {
+        memoryStore.updateBinsFromDb(bins);
+      }
     }
-    res.json(bins);
   } catch (err) {
-    res.json(defaultBins);
+    console.warn("MongoDB dustbins fetch notice:", err.message);
   }
+  res.json(memoryStore.getBins());
 });
 
 // Update dustbin status
@@ -251,39 +255,46 @@ app.post("/update-dustbin", async (req, res) => {
     return res.status(400).json({ error: "Valid percentage is required" });
   }
 
-  try {
-    const previousBin = await Dustbin.findOne({ id: parsedId });
-    if (!previousBin) {
-      return res.status(404).json({ message: "Dustbin not found" });
-    }
+  const updatedItem = memoryStore.updateBin({
+    id: parsedId,
+    level,
+    percentage: parsedPercentage,
+  });
 
-    const bin = await Dustbin.findOneAndUpdate(
-      { id: parsedId },
-      {
-        level: level,
+  if (mongoose.connection.readyState === 1) {
+    try {
+      const previousBin = await Dustbin.findOne({ id: parsedId });
+      await Dustbin.findOneAndUpdate(
+        { id: parsedId },
+        {
+          id: parsedId,
+          level,
+          percentage: parsedPercentage,
+          updatedAt: "Just now",
+        },
+        { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+      );
+
+      await DustbinHistory.create({
+        dustbinId: parsedId,
+        level,
         percentage: parsedPercentage,
-        updatedAt: "Just now",
-      },
-      { new: true }
-    );
+        source: "manual",
+      });
 
-    await DustbinHistory.create({
-      dustbinId: parsedId,
-      level: level || "unknown",
-      percentage: parsedPercentage,
-      source: "manual",
-    });
-
-    await createAdminNotificationIfCritical({
-      previousBin,
-      updatedBin: bin,
-      source: "manual",
-    });
-
-    res.json(bin);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+      if (previousBin) {
+        await createAdminNotificationIfCritical({
+          previousBin: previousBin.toObject(),
+          updatedBin: updatedItem,
+          source: "manual",
+        });
+      }
+    } catch (err) {
+      console.warn("MongoDB update-dustbin notice:", err.message);
+    }
   }
+
+  res.json(updatedItem);
 });
 
 app.get("/admin/notifications", requireAdmin, async (req, res) => {
@@ -343,168 +354,19 @@ app.patch("/admin/notifications/read-all", requireAdmin, async (req, res) => {
   }
 });
 
-const defaultStats = {
-  metrics: {
-    totalDustbins: 6,
-    avgFillLevel: 57,
-    needAttention: 2,
-    collectionsToday: 4,
-  },
-  fillLevelTrend: [
-    { date: "Mon 21", level: 45 },
-    { date: "Tue 22", level: 50 },
-    { date: "Wed 23", level: 48 },
-    { date: "Thu 24", level: 62 },
-    { date: "Fri 25", level: 55 },
-    { date: "Sat 26", level: 58 },
-    { date: "Sun 27", level: 57 },
-  ],
-  collectionData: [
-    { zone: "Zone A", collections: 12 },
-    { zone: "Zone B", collections: 8 },
-    { zone: "Zone C", collections: 15 },
-    { zone: "Zone D", collections: 6 },
-  ],
-  statusDistribution: [
-    { name: "Normal", value: 3, color: "#22c55e" },
-    { name: "Attention", value: 2, color: "#eab308" },
-    { name: "Critical", value: 1, color: "#ef4444" },
-    { name: "Offline", value: 0, color: "#94a3b8" },
-  ],
-  recentActivity: [
-    { dustbinId: "DB-006", status: "critical", message: "Critical level", time: "Just now" },
-    { dustbinId: "DB-003", status: "critical", message: "Critical level", time: "5 mins ago" },
-    { dustbinId: "DB-001", status: "normal", message: "50% full", time: "10 mins ago" },
-    { dustbinId: "DB-004", status: "attention", message: "65% full", time: "1 hour ago" },
-  ],
-};
-
 app.get("/dashboard-stats", async (req, res) => {
   try {
-    let bins = await Dustbin.find().lean();
-    let history = await DustbinHistory.find().sort({ createdAt: -1 }).lean();
-
-    if (!bins || bins.length === 0) {
-      bins = defaultBins;
+    if (mongoose.connection.readyState === 1) {
+      const bins = await Dustbin.find().lean();
+      if (bins && bins.length > 0) {
+        memoryStore.updateBinsFromDb(bins);
+      }
     }
-
-    const totalDustbins = bins.length;
-    const avgFillLevel = totalDustbins
-      ? Math.round(bins.reduce((sum, bin) => sum + (Number(bin.percentage) || 0), 0) / totalDustbins)
-      : 0;
-    const needAttention = bins.filter((bin) => (Number(bin.percentage) || 0) >= 70).length;
-
-    const now = new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    const collectionsToday = history.filter((entry) => {
-      const createdAt = new Date(entry.createdAt);
-      return createdAt >= startOfToday && (Number(entry.percentage) || 0) <= 20;
-    }).length;
-
-    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const fillLevelTrend = [];
-    const trendMap = new Map();
-    for (let i = 6; i >= 0; i -= 1) {
-      const day = new Date(now);
-      day.setHours(0, 0, 0, 0);
-      day.setDate(now.getDate() - i);
-      const key = day.toISOString().slice(0, 10);
-      trendMap.set(key, {
-        date: `${dayNames[day.getDay()]} ${day.getDate()}`,
-        sum: 0,
-        count: 0,
-      });
-    }
-
-    history.forEach((entry) => {
-      const date = new Date(entry.createdAt);
-      const key = date.toISOString().slice(0, 10);
-      if (!trendMap.has(key)) return;
-
-      const bucket = trendMap.get(key);
-      bucket.sum += Number(entry.percentage) || 0;
-      bucket.count += 1;
-    });
-
-    trendMap.forEach((value) => {
-      fillLevelTrend.push({
-        date: value.date,
-        level: value.count ? Math.round(value.sum / value.count) : 0,
-      });
-    });
-
-    const weekAgo = new Date(now);
-    weekAgo.setDate(now.getDate() - 7);
-
-    const zoneCounts = {
-      "Zone A": 0,
-      "Zone B": 0,
-      "Zone C": 0,
-      "Zone D": 0,
-    };
-    history.forEach((entry) => {
-      const createdAt = new Date(entry.createdAt);
-      if (createdAt < weekAgo) return;
-
-      const dustbinId = Number(entry.dustbinId) || 0;
-      const mod = ((dustbinId - 1) % 4 + 4) % 4;
-      if (mod === 0) zoneCounts["Zone A"] += 1;
-      if (mod === 1) zoneCounts["Zone B"] += 1;
-      if (mod === 2) zoneCounts["Zone C"] += 1;
-      if (mod === 3) zoneCounts["Zone D"] += 1;
-    });
-    const collectionData = Object.entries(zoneCounts).map(([zone, collections]) => ({ zone, collections }));
-
-    const statusCounts = {
-      Normal: 0,
-      Attention: 0,
-      Critical: 0,
-      Offline: 0,
-    };
-    bins.forEach((bin) => {
-      const pct = Number(bin.percentage) || 0;
-      if (pct >= 90) statusCounts.Critical += 1;
-      else if (pct >= 70) statusCounts.Attention += 1;
-      else statusCounts.Normal += 1;
-    });
-
-    const statusDistribution = [
-      { name: "Normal", value: statusCounts.Normal, color: "#22c55e" },
-      { name: "Attention", value: statusCounts.Attention, color: "#eab308" },
-      { name: "Critical", value: statusCounts.Critical, color: "#ef4444" },
-      { name: "Offline", value: statusCounts.Offline, color: "#94a3b8" },
-    ];
-
-    const recentActivity = history.slice(0, 8).map((entry) => {
-      const pct = Number(entry.percentage) || 0;
-      const status = pct >= 90 ? "critical" : pct >= 70 ? "attention" : "normal";
-      const message = pct >= 90 ? "Critical level" : `${pct}% full`;
-
-      return {
-        dustbinId: `DB-${String(entry.dustbinId).padStart(3, "0")}`,
-        status,
-        message,
-        time: new Date(entry.createdAt).toLocaleString(),
-      };
-    });
-
-    res.json({
-      metrics: {
-        totalDustbins,
-        avgFillLevel,
-        needAttention,
-        collectionsToday,
-      },
-      fillLevelTrend,
-      collectionData,
-      statusDistribution,
-      recentActivity,
-    });
-  } catch (error) {
-    console.error("Dashboard stats error:", error);
-    res.json(defaultStats);
+  } catch (err) {
+    console.warn("MongoDB dashboard-stats fetch notice:", err.message);
   }
+
+  res.json(memoryStore.getStats());
 });
 
 
