@@ -96,9 +96,47 @@ if (process.env.DNS_SERVERS) {
   dns.setServers(config.dnsServers);
 }
 
+const defaultBins = [
+  { id: 1, lat: 19.02305, lng: 72.85555, level: "half-full", percentage: 50, updatedAt: "10 mins ago" },
+  { id: 2, lat: 19.0217, lng: 72.8556, level: "empty", percentage: 15, updatedAt: "25 mins ago" },
+  { id: 3, lat: 19.0197, lng: 72.8559, level: "full", percentage: 95, updatedAt: "5 mins ago" },
+  { id: 4, lat: 19.0209, lng: 72.8560, level: "half-full", percentage: 65, updatedAt: "1 hour ago" },
+  { id: 5, lat: 19.0226, lng: 72.8564, level: "empty", percentage: 20, updatedAt: "2 hours ago" },
+  { id: 6, lat: 19.0239, lng: 72.8568, level: "overflowing", percentage: 100, updatedAt: "Just now" },
+];
+
+async function seedIfEmpty() {
+  try {
+    const binCount = await Dustbin.countDocuments();
+    if (binCount === 0) {
+      await Dustbin.insertMany(defaultBins);
+      console.log("Auto-seeded dustbins");
+    }
+
+    const historyCount = await DustbinHistory.countDocuments();
+    if (historyCount === 0) {
+      const now = new Date();
+      const sampleHistory = defaultBins.map((bin) => ({
+        dustbinId: bin.id,
+        level: bin.level,
+        percentage: bin.percentage,
+        source: "manual",
+        createdAt: now,
+      }));
+      await DustbinHistory.insertMany(sampleHistory);
+      console.log("Auto-seeded dustbin history");
+    }
+  } catch (err) {
+    console.error("Auto-seed error:", err);
+  }
+}
+
 // MongoDB Connection
 mongoose.connect(config.mongoUri)
-.then(() => console.log("MongoDB Connected"))
+.then(() => {
+  console.log("MongoDB Connected");
+  seedIfEmpty();
+})
 .catch((err) => console.log(err));
 
 
