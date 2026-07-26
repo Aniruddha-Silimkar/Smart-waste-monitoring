@@ -121,12 +121,13 @@ export function UploadSection({ user, onOpenAuth }: UploadSectionProps) {
       setDustbinNumber("");
     } catch (error) {
       console.error(error);
+      const errorMsg = error instanceof Error ? error.message : "Upload failed";
       toast.error(
         <div className="flex items-start gap-3">
           <TriangleAlert className="mt-0.5 h-5 w-5 text-white" />
           <div>
             <p className="text-base font-bold text-white">Upload failed</p>
-            <p className="text-sm text-rose-100">Check backend and Python model server</p>
+            <p className="text-sm text-rose-100">{errorMsg}</p>
           </div>
         </div>,
         {

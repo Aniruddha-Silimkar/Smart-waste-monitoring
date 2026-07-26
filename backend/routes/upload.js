@@ -10,7 +10,14 @@ const DustbinHistory = require("../models/DustbinHistory");
 const config = require("../config/env");
 const { createAdminNotificationIfCritical } = require("../utils/notifications");
 
-const upload = multer({ dest: "uploads/" });
+const path = require("path");
+
+const uploadDir = path.join(__dirname, "../uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const upload = multer({ dest: uploadDir });
 
 router.post("/", upload.single("image"), async (req, res) => {
   const filePath = req.file ? req.file.path : null;
