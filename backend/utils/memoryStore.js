@@ -21,9 +21,15 @@ function getBins() {
 }
 
 function updateBinsFromDb(dbBins) {
-  if (Array.isArray(dbBins) && dbBins.length > 0) {
-    binsStore = dbBins;
-  }
+  if (!Array.isArray(dbBins) || dbBins.length === 0) return;
+  dbBins.forEach((dbBin) => {
+    const idx = binsStore.findIndex((b) => b.id === dbBin.id);
+    if (idx === -1) {
+      binsStore.push(dbBin);
+    } else if (binsStore[idx].updatedAt !== "Just now" || dbBin.updatedAt === "Just now") {
+      binsStore[idx] = dbBin;
+    }
+  });
 }
 
 function updateBin({ id, level, percentage, lat, lng }) {

@@ -69,41 +69,39 @@ router.post("/", upload.single("image"), async (req, res) => {
       percentage: 0,
     };
 
-    if (mongoose.connection.readyState === 1) {
-      try {
-        const existingBin = await Dustbin.findOne({ id: parsedDustbinId });
-        if (existingBin) {
-          previousBin = existingBin.toObject();
-        }
+    try {
+      const existingBin = await Dustbin.findOne({ id: parsedDustbinId });
+      if (existingBin) {
+        previousBin = existingBin.toObject();
+      }
 
-        await Dustbin.findOneAndUpdate(
-          { id: parsedDustbinId },
-          {
-            id: parsedDustbinId,
-            lat: updated.lat,
-            lng: updated.lng,
-            level,
-            percentage,
-            updatedAt: "Just now",
-          },
-          { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
-        );
-
-        await DustbinHistory.create({
-          dustbinId: parsedDustbinId,
+      await Dustbin.findOneAndUpdate(
+        { id: parsedDustbinId },
+        {
+          id: parsedDustbinId,
+          lat: updated.lat,
+          lng: updated.lng,
           level,
           percentage,
-          source: "upload",
-        });
+          updatedAt: "Just now",
+        },
+        { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+      );
 
-        await createAdminNotificationIfCritical({
-          previousBin,
-          updatedBin: updated,
-          source: "upload",
-        });
-      } catch (dbErr) {
-        console.warn("MongoDB database update notice:", dbErr.message);
-      }
+      await DustbinHistory.create({
+        dustbinId: parsedDustbinId,
+        level,
+        percentage,
+        source: "upload",
+      });
+
+      await createAdminNotificationIfCritical({
+        previousBin,
+        updatedBin: updated,
+        source: "upload",
+      });
+    } catch (dbErr) {
+      console.warn("MongoDB database update notice:", dbErr.message);
     }
 
     if (filePath && fs.existsSync(filePath)) {
