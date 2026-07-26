@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { GoogleMap, InfoWindow, LoadScript, Marker, OverlayView, Polyline } from "@react-google-maps/api";
 import { MapPin, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Card } from "./ui/card";
+import { API_BASE_URL } from "../lib/api";
 
 const containerStyle = {
   width: "100%",
@@ -25,11 +26,15 @@ const zoneDividerLines = [
 ];
 
 const zoneLabels = [
-  { name: "Zone A", position: { lat: 19.0242, lng: 72.8542 } },
-  { name: "Zone B", position: { lat: 19.0242, lng: 72.8579 } },
-  { name: "Zone C", position: { lat: 19.0202, lng: 72.8542 } },
-  { name: "Zone D", position: { lat: 19.0202, lng: 72.8579 } },
+  { name: "Zone A", position: { lat: 19.0241, lng: 72.8550 } },
+  { name: "Zone B", position: { lat: 19.0241, lng: 72.8572 } },
+  { name: "Zone C", position: { lat: 19.0205, lng: 72.8550 } },
+  { name: "Zone D", position: { lat: 19.0205, lng: 72.8572 } },
 ];
+
+const displayPositionOverrides: Record<number, { lat: number; lng: number }> = {
+  1: { lat: 19.02305, lng: 72.85555 },
+};
 
 type Dustbin = {
   id: number;
@@ -46,7 +51,7 @@ const VJTIMap: React.FC = () => {
 
   const fetchBins = async () => {
     try {
-      const res = await fetch("http://localhost:5000/dustbins");
+      const res = await fetch(`${API_BASE_URL}/dustbins`);
       const data = await res.json();
       setBins(data);
     } catch (error) {
@@ -70,6 +75,8 @@ const VJTIMap: React.FC = () => {
     if (level === "half" || level === "half-full") return "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
     return "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
   };
+
+  const getDisplayPosition = (bin: Dustbin) => displayPositionOverrides[bin.id] ?? { lat: bin.lat, lng: bin.lng };
 
   const formatId = (id: number) => `DB-${id.toString().padStart(3, "0")}`;
 
@@ -110,8 +117,12 @@ const VJTIMap: React.FC = () => {
                   key={zone.name}
                   position={zone.position}
                   mapPaneName={OverlayView.OVERLAY_MOUSE_TARGET}
+                  getPixelPositionOffset={(width, height) => ({
+                    x: -(width / 2),
+                    y: -(height / 2),
+                  })}
                 >
-                  <div className="rounded-md border border-emerald-300/90 bg-white/95 px-2 py-1 text-[11px] font-semibold text-emerald-800 shadow-sm">
+                  <div className="whitespace-nowrap text-[12px] font-extrabold text-sky-950 drop-shadow-[0_1px_2px_rgba(255,255,255,1)]">
                     {zone.name}
                   </div>
                 </OverlayView>
@@ -120,7 +131,7 @@ const VJTIMap: React.FC = () => {
               {bins.map((bin) => (
                 <Marker
                   key={bin.id}
-                  position={{ lat: bin.lat, lng: bin.lng }}
+                  position={getDisplayPosition(bin)}
                   icon={getIcon(bin.level)}
                   onClick={() => setSelectedBin(bin)}
                 />
@@ -128,7 +139,7 @@ const VJTIMap: React.FC = () => {
 
               {selectedBin && (
                 <InfoWindow
-                  position={{ lat: selectedBin.lat, lng: selectedBin.lng }}
+                  position={getDisplayPosition(selectedBin)}
                   onCloseClick={() => setSelectedBin(null)}
                 >
                   <div>

@@ -1,95 +1,16 @@
-# from flask import Flask, request, jsonify
-# from inference_sdk import InferenceHTTPClient
-# import os
-
-# app = Flask(__name__)
-
-# client = InferenceHTTPClient(
-#     api_url="https://serverless.roboflow.com",
-#     api_key="YOUR_ROBOFLOW_API_KEY"
-# )
-
-# FILL_MAP = {
-#     "empty": 0,
-#     "half-full": 50,
-#     "full": 90,
-#     "overflowing": 100
-# }
-
-# def predict_fill(image_path):
-#     result = client.run_workflow(
-#         workspace_name="smartbin-1bvrq",
-#         workflow_id="custom-workflow",
-#         images={"image": image_path},
-#         use_cache=True
-#     )
-
-#     predictions = result[0]["predictions"]["predictions"]
-
-#     if len(predictions) == 0:
-#         return "empty", 0
-
-#     best = max(predictions, key=lambda x: x["confidence"])
-#     level = best["class"]
-#     percentage = FILL_MAP.get(level, 0)
-
-#     return level, percentage
-
-
-# @app.route("/predict", methods=["POST"])
-# def predict():
-#     file = request.files["image"]
-
-#     path = "temp.jpg"
-#     file.save(path)
-
-#     level, percentage = predict_fill(path)
-
-#     os.remove(path)
-
-#     return jsonify({
-#         "level": level,
-#         "percentage": percentage
-#     })
-
-
-# if __name__ == "__main__":
-#     app.run(port=5001)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 from flask import Flask, request, jsonify
 from inference_sdk import InferenceHTTPClient
 import os
 
 app = Flask(__name__)
 
+# client = InferenceHTTPClient(
+#     api_url="https://serverless.roboflow.com",
+#     api_key="elTjeBiR1X7U6lyTRtd4"   # keep your key here
+# )
 client = InferenceHTTPClient(
     api_url="https://serverless.roboflow.com",
-    api_key="elTjeBiR1X7U6lyTRtd4"   # keep your key here
+    api_key="n41kmiLX7Wo2xNIyGNSf"
 )
 
 FILL_MAP = {
@@ -102,8 +23,8 @@ FILL_MAP = {
 
 def predict_fill(image_path):
     result = client.run_workflow(
-        workspace_name="smartbin-1bvrq",
-        workflow_id="custom-workflow",
+    workspace_name="aniruddhas-workspace",
+    workflow_id="custom-workflow",
         images={"image": image_path},
         use_cache=True
     )

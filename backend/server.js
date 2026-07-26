@@ -8,7 +8,7 @@
 
 // // MongoDB Connection
 // mongoose.connect(
-//   "mongodb+srv://admin:1234@cluster0.3cniunt.mongodb.net/smartbin?retryWrites=true&w=majority"
+//   process.env.MONGO_URI
 // )
 // .then(() => console.log("MongoDB Connected"))
 // .catch((err) => console.log(err));
@@ -75,7 +75,9 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-require("dotenv").config();
+const jwt = require("jsonwebtoken");
+const dns = require("dns");
+const config = require("./config/env");
 
 const app = express();
 app.use(cors());
@@ -84,13 +86,16 @@ app.use(express.json());
 // Import Model
 const Dustbin = require("./models/Dustbin");
 const DustbinHistory = require("./models/DustbinHistory");
+const AdminNotification = require("./models/AdminNotification");
 const authRoute = require("./routes/auth");
 const uploadRoute = require("./routes/upload");
+const { createAdminNotificationIfCritical, isAttentionLevel } = require("./utils/notifications");
+const localAdminNotificationStore = require("./utils/localAdminNotificationStore");
+
+dns.setServers(config.dnsServers);
 
 // MongoDB Connection
-mongoose.connect(
-  process.env.MONGO_URI || "mongodb+srv://admin:1234@cluster0.3cniunt.mongodb.net/smartbin?retryWrites=true&w=majority"
-)
+mongoose.connect(config.mongoUri)
 .then(() => console.log("MongoDB Connected"))
 .catch((err) => console.log(err));
 
@@ -104,6 +109,76 @@ app.get("/", (req, res) => {
 
 app.use("/auth", authRoute);
 app.use("/upload", uploadRoute);
+
+function isMongoConnected() {
+  return mongoose.connection.readyState === 1;
+}
+
+function requireAdmin(req, res, next) {
+  try {
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    if (!token) {
+      return res.status(401).json({ error: "Missing authorization token" });
+    }
+
+    const payload = jwt.verify(token, config.jwtSecret);
+    if (payload.role !== "admin") {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+
+    req.auth = payload;
+    return next();
+  } catch (error) {
+    return res.status(401).json({ error: "Invalid or expired token" });
+  }
+}
+
+function createNotificationPayload(bin, source = "current-status") {
+  const dbId = String(bin.id).padStart(3, "0");
+  const percentage = Number(bin.percentage) || 0;
+  const levelText = bin.level === "half-full" ? "half full" : bin.level;
+
+  return {
+    dustbinId: bin.id,
+    level: bin.level,
+    percentage,
+    lat: Number(bin.lat) || 0,
+    lng: Number(bin.lng) || 0,
+    source,
+    message: `Dustbin DB-${dbId} is ${levelText} at ${percentage}%`,
+  };
+}
+
+async function getCurrentAdminNotifications(limit) {
+  const attentionBins = (await Dustbin.find().lean()).filter((bin) => isAttentionLevel(bin.level));
+  const notifications = [];
+
+  for (const bin of attentionBins) {
+    const existing = await AdminNotification.findOne({
+      dustbinId: bin.id,
+      level: bin.level,
+      percentage: Number(bin.percentage) || 0,
+    }).sort({ createdAt: -1 });
+
+    if (existing) {
+      notifications.push(existing.toObject());
+      continue;
+    }
+
+    const created = await AdminNotification.create(createNotificationPayload(bin));
+    notifications.push(created.toObject());
+  }
+
+  const sorted = notifications.sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
+  return {
+    notifications: sorted.slice(0, limit),
+    unreadCount: sorted.filter((notification) => !notification.isRead).length,
+  };
+}
 
 // Get all dustbins
 app.get("/dustbins", async (req, res) => {
@@ -130,6 +205,11 @@ app.post("/update-dustbin", async (req, res) => {
   }
 
   try {
+    const previousBin = await Dustbin.findOne({ id: parsedId });
+    if (!previousBin) {
+      return res.status(404).json({ message: "Dustbin not found" });
+    }
+
     const bin = await Dustbin.findOneAndUpdate(
       { id: parsedId },
       {
@@ -140,10 +220,6 @@ app.post("/update-dustbin", async (req, res) => {
       { new: true }
     );
 
-    if (!bin) {
-      return res.status(404).json({ message: "Dustbin not found" });
-    }
-
     await DustbinHistory.create({
       dustbinId: parsedId,
       level: level || "unknown",
@@ -151,9 +227,72 @@ app.post("/update-dustbin", async (req, res) => {
       source: "manual",
     });
 
+    await createAdminNotificationIfCritical({
+      previousBin,
+      updatedBin: bin,
+      source: "manual",
+    });
+
     res.json(bin);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/admin/notifications", requireAdmin, async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+    if (!isMongoConnected()) {
+      return res.json({
+        notifications: localAdminNotificationStore.listNotifications(limit),
+        unreadCount: localAdminNotificationStore.countUnread(),
+      });
+    }
+
+    res.json(await getCurrentAdminNotifications(limit));
+  } catch (error) {
+    res.status(500).json({ error: "Failed to fetch admin notifications" });
+  }
+});
+
+app.patch("/admin/notifications/:id/read", requireAdmin, async (req, res) => {
+  try {
+    if (!isMongoConnected()) {
+      const updated = localAdminNotificationStore.markRead(req.params.id);
+      if (!updated) {
+        return res.status(404).json({ error: "Notification not found" });
+      }
+
+      return res.json({ notification: updated });
+    }
+
+    const updated = await AdminNotification.findByIdAndUpdate(
+      req.params.id,
+      { isRead: true },
+      { new: true },
+    );
+
+    if (!updated) {
+      return res.status(404).json({ error: "Notification not found" });
+    }
+
+    return res.json({ notification: updated });
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to update notification" });
+  }
+});
+
+app.patch("/admin/notifications/read-all", requireAdmin, async (req, res) => {
+  try {
+    if (!isMongoConnected()) {
+      localAdminNotificationStore.markAllRead();
+      return res.json({ success: true });
+    }
+
+    await AdminNotification.updateMany({ isRead: false }, { isRead: true });
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to update notifications" });
   }
 });
 
@@ -285,7 +424,6 @@ app.get("/dashboard-stats", async (req, res) => {
 
 
 // ---------------- START SERVER ---------------- //
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(config.port, () => {
+  console.log(`Server running on port ${config.port}`);
 });

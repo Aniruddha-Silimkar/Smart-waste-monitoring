@@ -1,18 +1,30 @@
 import { useState } from "react";
-import { Upload, Camera, X, Loader2, CircleCheckBig, TriangleAlert } from "lucide-react";
+import { Upload, Camera, X, Loader2, CircleCheckBig, TriangleAlert, Lock, LogIn } from "lucide-react";
 import { Card } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
+import { API_BASE_URL } from "../lib/api";
 
-export function UploadSection() {
+interface UploadSectionProps {
+  user?: { name: string; role: "user" | "admin" } | null;
+  onOpenAuth?: () => void;
+}
+
+export function UploadSection({ user, onOpenAuth }: UploadSectionProps) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dustbinNumber, setDustbinNumber] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!user) {
+      toast.error("Please log in to upload dustbin images");
+      if (onOpenAuth) onOpenAuth();
+      return;
+    }
+
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -28,6 +40,12 @@ export function UploadSection() {
   };
 
   const handleSubmit = async () => {
+    if (!user) {
+      toast.error("Please log in to upload dustbin images");
+      if (onOpenAuth) onOpenAuth();
+      return;
+    }
+
     if (!selectedFile || !dustbinNumber) {
       toast.error("Please upload an image and enter dustbin number");
       return;
@@ -63,7 +81,7 @@ export function UploadSection() {
       formData.append("image", selectedFile);
       formData.append("dustbinId", dustbinNumber);
 
-      const response = await fetch("http://localhost:5000/upload", {
+      const response = await fetch(`${API_BASE_URL}/upload`, {
         method: "POST",
         body: formData,
       });
@@ -134,15 +152,35 @@ export function UploadSection() {
 
   return (
     <Card className="border-emerald-100/70 bg-white/86 p-6 sm:p-7">
-      <div className="mb-5 flex items-center gap-3">
-        <div className="rounded-xl bg-emerald-100 p-2.5 text-emerald-700">
-          <Camera className="h-5 w-5" />
-        </div>
-        <div>
-          <h2 className="text-xl font-semibold text-slate-900">Upload Dustbin Image</h2>
-          <p className="text-sm text-slate-600">Add a fresh dustbin image to update fill status</p>
+      <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="rounded-xl bg-emerald-100 p-2.5 text-emerald-700">
+            <Camera className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-slate-900">Upload Dustbin Image</h2>
+            <p className="text-sm text-slate-600">Add a fresh dustbin image to update fill status</p>
+          </div>
         </div>
       </div>
+
+      {!user && (
+        <div className="mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-xl border border-amber-200 bg-amber-50/90 p-4 text-amber-900 shadow-xs">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-amber-200/70 p-2 text-amber-800 shrink-0">
+              <Lock className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Login required to upload images</p>
+              <p className="text-xs text-amber-700">You are browsing as a guest. Please log in to submit dustbin updates.</p>
+            </div>
+          </div>
+          <Button onClick={onOpenAuth} size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 gap-1.5 font-medium shadow-xs">
+            <LogIn className="h-4 w-4" />
+            Log In to Upload
+          </Button>
+        </div>
+      )}
 
       <div className="space-y-5">
         <div>
@@ -164,18 +202,28 @@ export function UploadSection() {
           ) : (
             <label
               htmlFor="dustbin-image"
+              onClick={(e) => {
+                if (!user) {
+                  e.preventDefault();
+                  toast.error("Please log in to upload dustbin images");
+                  if (onOpenAuth) onOpenAuth();
+                }
+              }}
               className="group flex h-64 w-full cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-emerald-200 bg-emerald-50/40 p-6 text-center transition hover:border-emerald-400 hover:bg-emerald-50"
             >
               <div className="mb-3 rounded-2xl bg-emerald-100 p-3 text-emerald-700 transition group-hover:bg-emerald-200">
                 <Upload className="h-7 w-7" />
               </div>
-              <p className="text-sm font-semibold text-slate-900">Click to upload an image</p>
+              <p className="text-sm font-semibold text-slate-900">
+                {user ? "Click to upload an image" : "Sign in to upload an image"}
+              </p>
               <p className="mt-1 text-xs text-slate-500">PNG, JPG up to 10MB</p>
               <input
                 id="dustbin-image"
                 type="file"
                 accept="image/*"
                 onChange={handleImageUpload}
+                disabled={!user}
                 className="hidden"
               />
             </label>
@@ -192,13 +240,21 @@ export function UploadSection() {
             placeholder="Enter Dustbin ID (e.g., 3)"
             value={dustbinNumber}
             onChange={(e) => setDustbinNumber(e.target.value)}
+            disabled={!user}
             className="h-11 border-emerald-100 bg-white"
           />
         </div>
 
-        <Button onClick={handleSubmit} disabled={loading} className="h-11 w-full text-sm">
-          {loading ? "Analyzing..." : "Analyze Dustbin"}
-        </Button>
+        {user ? (
+          <Button onClick={handleSubmit} disabled={loading} className="h-11 w-full text-sm">
+            {loading ? "Analyzing..." : "Analyze Dustbin"}
+          </Button>
+        ) : (
+          <Button onClick={onOpenAuth} className="h-11 w-full text-sm bg-emerald-600 hover:bg-emerald-700 text-white gap-2 font-medium">
+            <LogIn className="h-4 w-4" />
+            Log In to Analyze Dustbin
+          </Button>
+        )}
       </div>
     </Card>
   );

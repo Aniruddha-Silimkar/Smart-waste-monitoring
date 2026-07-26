@@ -1,9 +1,12 @@
 const mongoose = require("mongoose");
+const dns = require("dns");
+require("dotenv").config();
+
 const Dustbin = require("./models/Dustbin");
 
-mongoose.connect(
-  "mongodb+srv://admin:1234@cluster0.3cniunt.mongodb.net/smartbin?retryWrites=true&w=majority"
-);
+dns.setServers((process.env.DNS_SERVERS || "8.8.8.8,1.1.1.1").split(",").map((server) => server.trim()));
+
+mongoose.connect(process.env.MONGO_URI);
 
 const seedData = [
   { id: 1, lat: 19.0222, lng: 72.8561 },

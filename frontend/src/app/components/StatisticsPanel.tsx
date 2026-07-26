@@ -16,8 +16,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-
-const API_BASE_URL = "http://localhost:5000";
+import { API_BASE_URL } from "../lib/api";
 
 type DashboardStats = {
   metrics: {

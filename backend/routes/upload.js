@@ -7,6 +7,8 @@ const fs = require("fs");
 
 const Dustbin = require("../models/Dustbin");
 const DustbinHistory = require("../models/DustbinHistory");
+const config = require("../config/env");
+const { createAdminNotificationIfCritical } = require("../utils/notifications");
 
 const upload = multer({ dest: "uploads/" });
 
@@ -24,13 +26,15 @@ router.post("/", upload.single("image"), async (req, res) => {
     const form = new FormData();
     form.append("image", fs.createReadStream(filePath));
 
-    const response = await axios.post(
-      "http://127.0.0.1:5001/predict",
-      form,
-      { headers: form.getHeaders() }
-    );
+    const response = await axios.post(config.modelApiUrl, form, { headers: form.getHeaders() });
 
     const { level, percentage } = response.data;
+
+    const previousBin = await Dustbin.findOne({ id: parsedDustbinId });
+    if (!previousBin) {
+      fs.unlinkSync(filePath);
+      return res.status(404).json({ error: "Dustbin not found" });
+    }
 
     // Update MongoDB
     const updated = await Dustbin.findOneAndUpdate(
@@ -43,15 +47,16 @@ router.post("/", upload.single("image"), async (req, res) => {
       { new: true }
     );
 
-    if (!updated) {
-      fs.unlinkSync(filePath);
-      return res.status(404).json({ error: "Dustbin not found" });
-    }
-
     await DustbinHistory.create({
       dustbinId: parsedDustbinId,
       level,
       percentage,
+      source: "upload",
+    });
+
+    await createAdminNotificationIfCritical({
+      previousBin,
+      updatedBin: updated,
       source: "upload",
     });
 

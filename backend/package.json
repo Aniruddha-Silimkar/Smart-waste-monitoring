@@ -1,7 +1,3 @@
-
-
-
-
 {
   "name": "backend",
   "version": "1.0.0",
@@ -11,7 +7,8 @@
     "start": "node server.js",
     "server": "nodemon server.js",
     "dev": "nodemon server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "model": "cd python && .\\.venv\\Scripts\\python.exe model_api.py",
+    "test": "node --check server.js && node --check routes/auth.js && node --check routes/upload.js && node --check models/Dustbin.js && node --check models/DustbinHistory.js && node --check models/User.js && node --check models/AdminNotification.js && node --check utils/notifications.js && node --check utils/localAuthStore.js && node --check utils/localAdminNotificationStore.js && node --check config/env.js"
   },
   "keywords": [],
   "author": "",

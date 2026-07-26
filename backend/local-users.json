@@ -1,0 +1,11 @@
+[
+  {
+    "_id": "dc798944-c155-4572-a2ff-c47d28c1d11a",
+    "name": "Aniruddha",
+    "email": "aniruddhasilimkar25@gmail.com",
+    "password": "$2b$10$a3jxYM.tIWW6D3tR3iPrxeP516pqTbBi7uSdpiDIrwb91DEK5O3t6",
+    "role": "user",
+    "createdAt": "2026-07-23T19:04:28.113Z",
+    "updatedAt": "2026-07-23T19:04:28.113Z"
+  }
+]

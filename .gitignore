@@ -24,7 +24,7 @@ build/
 
 
 # Frontend
-Smart Waste Monitoring Interface/node_modules/
+frontend/node_modules/
 
 # Backend
 backend/node_modules/
