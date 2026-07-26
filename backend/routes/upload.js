@@ -73,44 +73,51 @@ router.post("/", upload.single("image"), async (req, res) => {
       percentage: 0,
     };
 
-    if (isMongoConnected()) {
-      try {
-        const existingBin = await Dustbin.findOne({ id: parsedDustbinId });
-        if (existingBin) {
-          previousBin = existingBin.toObject();
-        }
+    let previousBin = {
+      id: parsedDustbinId,
+      lat: 19.0222,
+      lng: 72.8561,
+      level: "empty",
+      percentage: 0,
+    };
 
-        const dbUpdated = await Dustbin.findOneAndUpdate(
-          { id: parsedDustbinId },
-          {
-            id: parsedDustbinId,
-            lat: previousBin.lat || 19.0222,
-            lng: previousBin.lng || 72.8561,
-            level,
-            percentage,
-            updatedAt: "Just now",
-          },
-          { upsert: true, new: true, setDefaultsOnInsert: true }
-        );
-        if (dbUpdated) {
-          updated = dbUpdated.toObject();
-        }
+    try {
+      const existingBin = await Dustbin.findOne({ id: parsedDustbinId });
+      if (existingBin) {
+        previousBin = existingBin.toObject();
+      }
 
-        await DustbinHistory.create({
-          dustbinId: parsedDustbinId,
+      const dbUpdated = await Dustbin.findOneAndUpdate(
+        { id: parsedDustbinId },
+        {
+          id: parsedDustbinId,
+          lat: previousBin.lat || 19.0222,
+          lng: previousBin.lng || 72.8561,
           level,
           percentage,
-          source: "upload",
-        });
+          updatedAt: "Just now",
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
 
-        await createAdminNotificationIfCritical({
-          previousBin,
-          updatedBin: updated,
-          source: "upload",
-        });
-      } catch (dbErr) {
-        console.warn("MongoDB database write notice:", dbErr.message);
+      if (dbUpdated) {
+        updated = dbUpdated.toObject();
       }
+
+      await DustbinHistory.create({
+        dustbinId: parsedDustbinId,
+        level,
+        percentage,
+        source: "upload",
+      });
+
+      await createAdminNotificationIfCritical({
+        previousBin,
+        updatedBin: updated,
+        source: "upload",
+      });
+    } catch (dbErr) {
+      console.warn("MongoDB database update notice:", dbErr.message);
     }
 
     if (filePath && fs.existsSync(filePath)) {
