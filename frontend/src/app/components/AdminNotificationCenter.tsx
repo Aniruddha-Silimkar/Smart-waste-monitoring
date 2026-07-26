@@ -82,7 +82,17 @@ export function AdminNotificationCenter({ token }: AdminNotificationCenterProps)
     const timer = setInterval(() => {
       fetchNotifications();
     }, 10000);
-    return () => clearInterval(timer);
+
+    const handleUpdate = () => {
+      fetchNotifications();
+    };
+
+    window.addEventListener("dustbin-updated", handleUpdate);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("dustbin-updated", handleUpdate);
+    };
   }, [fetchNotifications]);
 
   const markRead = async (id: string) => {
