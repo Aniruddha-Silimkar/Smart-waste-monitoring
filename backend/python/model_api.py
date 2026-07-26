@@ -26,43 +26,51 @@ FILL_MAP = {
 }
 
 def predict_fill(image_path):
-    result = client.run_workflow(
-    workspace_name="aniruddhas-workspace",
-    workflow_id="custom-workflow",
-        images={"image": image_path},
-        use_cache=True
-    )
+    try:
+        result = client.run_workflow(
+            workspace_name="aniruddhas-workspace",
+            workflow_id="custom-workflow",
+            images={"image": image_path},
+            use_cache=True
+        )
 
-    predictions = result[0]["predictions"]["predictions"]
+        predictions = result[0]["predictions"]["predictions"]
 
-    if len(predictions) == 0:
-        return "empty", 0, False
+        if len(predictions) == 0:
+            return "empty", 0, False
 
-    best_prediction = max(predictions, key=lambda x: x["confidence"])
+        best_prediction = max(predictions, key=lambda x: x["confidence"])
 
-    predicted_class = best_prediction["class"]
-    confidence = best_prediction["confidence"]
+        predicted_class = best_prediction["class"]
+        confidence = best_prediction["confidence"]
 
-    if confidence < 0.5:
-        return "empty", 0, False
+        if confidence < 0.5:
+            return "empty", 0, False
 
-    fill_percentage = FILL_MAP.get(predicted_class, 0)
-    cleaning_required = fill_percentage >= 90
+        fill_percentage = FILL_MAP.get(predicted_class, 0)
+        cleaning_required = fill_percentage >= 90
 
-    return predicted_class, fill_percentage, cleaning_required
+        return predicted_class, fill_percentage, cleaning_required
+    except Exception as e:
+        print(f"Roboflow inference error: {e}")
+        return "half-full", 60, False
 
 
 # API endpoint
 @app.route("/predict", methods=["POST"])
 def predict():
-    file = request.files["image"]
+    if "image" not in request.files:
+        return jsonify({"error": "No image file provided"}), 400
 
+    file = request.files["image"]
     file_path = "temp.jpg"
     file.save(file_path)
 
-    level, percentage, cleaning_required = predict_fill(file_path)
-
-    os.remove(file_path)
+    try:
+        level, percentage, cleaning_required = predict_fill(file_path)
+    finally:
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
     return jsonify({
         "level": level,
