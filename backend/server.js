@@ -193,17 +193,30 @@ function createNotificationPayload(bin, source = "current-status") {
 }
 
 async function getCurrentAdminNotifications(limit) {
-  let dbNotifications = [];
-  try {
-    if (isMongoConnected()) {
-      dbNotifications = await AdminNotification.find().sort({ createdAt: -1 }).limit(limit).lean();
-    }
-  } catch (err) {
-    console.warn("MongoDB getCurrentAdminNotifications notice:", err.message);
+  const bins = memoryStore.getBins();
+  const attentionBins = bins.filter((bin) => isAttentionLevel(bin.level));
+  const notifications = [];
+
+  for (const bin of attentionBins) {
+    const dbId = String(bin.id).padStart(3, "0");
+    const percentage = Number(bin.percentage) || 0;
+    const levelText = bin.level === "half-full" ? "half full" : bin.level;
+    notifications.push({
+      _id: `notif-${bin.id}`,
+      dustbinId: bin.id,
+      level: bin.level,
+      percentage,
+      lat: Number(bin.lat) || 0,
+      lng: Number(bin.lng) || 0,
+      source: "upload",
+      message: `Dustbin DB-${dbId} is ${levelText} at ${percentage}%`,
+      isRead: false,
+      createdAt: new Date().toISOString(),
+    });
   }
 
-  const localNotifications = localAdminNotificationStore.listNotifications(limit);
-  const combined = [...dbNotifications, ...localNotifications];
+  const localNotifs = localAdminNotificationStore.listNotifications(limit);
+  const combined = [...notifications, ...localNotifs];
   const uniqueMap = new Map();
 
   combined.forEach((item) => {
@@ -222,41 +235,6 @@ async function getCurrentAdminNotifications(limit) {
   const sorted = Array.from(uniqueMap.values()).sort(
     (a, b) => getTime(b.createdAt) - getTime(a.createdAt)
   );
-
-  if (sorted.length === 0) {
-    const defaultNotifs = [
-      {
-        _id: "init-notif-6",
-        dustbinId: 6,
-        level: "overflowing",
-        percentage: 100,
-        lat: 19.0239,
-        lng: 72.8568,
-        source: "manual",
-        message: "Dustbin DB-006 is overflowing at 100%",
-        isRead: false,
-        createdAt: new Date(Date.now() - 60000).toISOString(),
-        updatedAt: new Date(Date.now() - 60000).toISOString(),
-      },
-      {
-        _id: "init-notif-3",
-        dustbinId: 3,
-        level: "full",
-        percentage: 95,
-        lat: 19.0197,
-        lng: 72.8559,
-        source: "manual",
-        message: "Dustbin DB-003 is full at 95%",
-        isRead: false,
-        createdAt: new Date(Date.now() - 300000).toISOString(),
-        updatedAt: new Date(Date.now() - 300000).toISOString(),
-      },
-    ];
-    return {
-      notifications: defaultNotifs,
-      unreadCount: defaultNotifs.filter((n) => !n.isRead).length,
-    };
-  }
 
   return {
     notifications: sorted.slice(0, limit),
