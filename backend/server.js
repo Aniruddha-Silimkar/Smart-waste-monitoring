@@ -202,7 +202,7 @@ async function getCurrentAdminNotifications(limit) {
     const percentage = Number(bin.percentage) || 0;
     const levelText = bin.level === "half-full" ? "half full" : bin.level;
     notifications.push({
-      _id: `notif-${bin.id}`,
+      _id: `notif-${bin.id}-${bin.level}-${percentage}-${bin.updatedAt}`,
       dustbinId: bin.id,
       level: bin.level,
       percentage,

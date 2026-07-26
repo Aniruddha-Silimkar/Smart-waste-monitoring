@@ -50,18 +50,16 @@ export function AdminNotificationCenter({ token }: AdminNotificationCenterProps)
       const currentIds = new Set(nextNotifications.map((item) => item._id));
       const isFirstLoad = previousNotificationIds.current.size === 0;
 
-      if (!isFirstLoad) {
-        const newUnread = nextNotifications.filter(
-          (item) => !item.isRead && !previousNotificationIds.current.has(item._id),
-        );
+      const newUnread = nextNotifications.filter(
+        (item) => !item.isRead && !previousNotificationIds.current.has(item._id),
+      );
 
-        newUnread.forEach((item) => {
-          const dbId = String(item.dustbinId).padStart(3, "0");
-          toast.error(`Dustbin alert: DB-${dbId} (${formatLevel(item.level)})`, {
-            description: `${item.percentage}% full at ${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}`,
-          });
+      newUnread.forEach((item) => {
+        const dbId = String(item.dustbinId).padStart(3, "0");
+        toast.error(`Dustbin alert: DB-${dbId} (${formatLevel(item.level)})`, {
+          description: `${item.percentage}% full at ${item.lat.toFixed(4)}, ${item.lng.toFixed(4)}`,
         });
-      }
+      });
 
       previousNotificationIds.current = currentIds;
       setNotifications(nextNotifications);
