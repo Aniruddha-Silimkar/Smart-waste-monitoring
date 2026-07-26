@@ -19,13 +19,14 @@ type AdminNotification = {
 
 interface AdminNotificationCenterProps {
   token: string;
+  isSection?: boolean;
 }
 
 function formatLevel(level: AdminNotification["level"]) {
   return level === "half-full" ? "half full" : level;
 }
 
-export function AdminNotificationCenter({ token }: AdminNotificationCenterProps) {
+export function AdminNotificationCenter({ token, isSection }: AdminNotificationCenterProps) {
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -138,6 +139,80 @@ export function AdminNotificationCenter({ token }: AdminNotificationCenterProps)
       ),
     [notifications],
   );
+
+  if (isSection) {
+    return (
+      <Card className="w-full border-slate-200/90 bg-white p-6 shadow-xl rounded-2xl">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-100 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-rose-100 p-2.5 text-rose-700">
+              <Bell className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">Admin Notification Center</h2>
+              <p className="text-sm text-slate-600">Real-time campus dustbin alerts and critical fill notices</p>
+            </div>
+          </div>
+          <Button variant="outline" size="sm" onClick={markAllRead} className="gap-1.5 border-slate-300">
+            <CheckCheck className="h-4 w-4" />
+            Mark All Read
+          </Button>
+        </div>
+
+        {loading ? (
+          <p className="text-sm text-slate-500 py-4">Loading notifications...</p>
+        ) : sorted.length === 0 ? (
+          <div className="p-8 text-center">
+            <CheckCheck className="mx-auto h-12 w-12 text-emerald-500 mb-2" />
+            <p className="text-base font-semibold text-slate-800">All Clear!</p>
+            <p className="text-sm text-slate-500">No dustbins currently require attention.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {sorted.map((item) => {
+              const dbId = String(item.dustbinId).padStart(3, "0");
+              return (
+                <div
+                  key={item._id}
+                  className={`w-full rounded-xl border p-4 text-left transition flex items-center justify-between gap-4 ${
+                    item.isRead
+                      ? "border-slate-200 bg-slate-50/70"
+                      : "border-rose-200 bg-rose-50/90 shadow-sm"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`rounded-full p-2 mt-0.5 ${item.isRead ? "bg-slate-200 text-slate-600" : "bg-rose-100 text-rose-700"}`}>
+                      <TriangleAlert className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900 text-base">
+                        Dustbin DB-{dbId} ({formatLevel(item.level)})
+                      </p>
+                      <p className="text-sm text-slate-600 font-medium">{item.percentage}% full</p>
+                      <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+                        <MapPin className="h-3.5 w-3.5" />
+                        Lat: {item.lat.toFixed(4)}, Lng: {item.lng.toFixed(4)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right flex flex-col items-end gap-2">
+                    <span className="text-xs text-slate-500 font-medium">
+                      {new Date(item.createdAt).toLocaleString()}
+                    </span>
+                    {!item.isRead && (
+                      <Button size="sm" variant="ghost" onClick={() => markRead(item._id)} className="h-8 text-xs text-rose-700 hover:bg-rose-100">
+                        Mark Read
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+    );
+  }
 
   return (
     <div className="relative">
