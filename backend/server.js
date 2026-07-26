@@ -213,8 +213,14 @@ async function getCurrentAdminNotifications(limit) {
     }
   });
 
+  const getTime = (dateStr) => {
+    if (!dateStr) return 0;
+    const t = new Date(dateStr).getTime();
+    return Number.isNaN(t) ? 0 : t;
+  };
+
   const sorted = Array.from(uniqueMap.values()).sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a, b) => getTime(b.createdAt) - getTime(a.createdAt)
   );
 
   if (sorted.length === 0) {

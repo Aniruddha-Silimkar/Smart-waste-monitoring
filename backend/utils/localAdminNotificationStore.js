@@ -70,8 +70,13 @@ function createNotification(data) {
 }
 
 function listNotifications(limit = 20) {
+  const getTime = (dateStr) => {
+    if (!dateStr) return 0;
+    const t = new Date(dateStr).getTime();
+    return Number.isNaN(t) ? 0 : t;
+  };
   return readNotifications()
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort((a, b) => getTime(b.createdAt) - getTime(a.createdAt))
     .slice(0, limit);
 }
 
