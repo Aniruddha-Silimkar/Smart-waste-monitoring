@@ -217,6 +217,41 @@ async function getCurrentAdminNotifications(limit) {
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
+  if (sorted.length === 0) {
+    const defaultNotifs = [
+      {
+        _id: "init-notif-6",
+        dustbinId: 6,
+        level: "overflowing",
+        percentage: 100,
+        lat: 19.0239,
+        lng: 72.8568,
+        source: "manual",
+        message: "Dustbin DB-006 is overflowing at 100%",
+        isRead: false,
+        createdAt: new Date(Date.now() - 60000).toISOString(),
+        updatedAt: new Date(Date.now() - 60000).toISOString(),
+      },
+      {
+        _id: "init-notif-3",
+        dustbinId: 3,
+        level: "full",
+        percentage: 95,
+        lat: 19.0197,
+        lng: 72.8559,
+        source: "manual",
+        message: "Dustbin DB-003 is full at 95%",
+        isRead: false,
+        createdAt: new Date(Date.now() - 300000).toISOString(),
+        updatedAt: new Date(Date.now() - 300000).toISOString(),
+      },
+    ];
+    return {
+      notifications: defaultNotifs,
+      unreadCount: defaultNotifs.filter((n) => !n.isRead).length,
+    };
+  }
+
   return {
     notifications: sorted.slice(0, limit),
     unreadCount: sorted.filter((notification) => !notification.isRead).length,
