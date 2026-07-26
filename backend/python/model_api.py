@@ -4,6 +4,10 @@ import os
 
 app = Flask(__name__)
 
+@app.route("/", methods=["GET"])
+def health_check():
+    return jsonify({"status": "SmartWaste Model API is running", "service": "python-inference"})
+
 # client = InferenceHTTPClient(
 #     api_url="https://serverless.roboflow.com",
 #     api_key="elTjeBiR1X7U6lyTRtd4"   # keep your key here
