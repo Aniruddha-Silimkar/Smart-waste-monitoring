@@ -92,8 +92,10 @@ const uploadRoute = require("./routes/upload");
 const { createAdminNotificationIfCritical, isAttentionLevel } = require("./utils/notifications");
 const localAdminNotificationStore = require("./utils/localAdminNotificationStore");
 
-if (process.env.DNS_SERVERS) {
+try {
   dns.setServers(config.dnsServers);
+} catch (dnsErr) {
+  console.warn("DNS server setup notice:", dnsErr.message);
 }
 
 const defaultBins = [
