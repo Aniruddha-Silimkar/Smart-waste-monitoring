@@ -71,10 +71,12 @@ const VJTIMap: React.FC = () => {
   }, []);
 
   const getIcon = (level: string) => {
-    if (level === "full" || level === "overflowing") return "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
-    if (level === "half" || level === "half-full") return "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
-    return "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
+    if (level === "full" || level === "overflowing") return "https://maps.google.com/mapfiles/ms/icons/red-dot.png";
+    if (level === "half" || level === "half-full") return "https://maps.google.com/mapfiles/ms/icons/yellow-dot.png";
+    return "https://maps.google.com/mapfiles/ms/icons/green-dot.png";
   };
+
+  const apiKey = (import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string) || "";
 
   const getDisplayPosition = (bin: Dustbin) => displayPositionOverrides[bin.id] ?? { lat: bin.lat, lng: bin.lng };
 
@@ -95,8 +97,13 @@ const VJTIMap: React.FC = () => {
       </div>
 
       <div className="p-4 sm:p-6">
+        {!apiKey && (
+          <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800">
+            <strong>Note:</strong> Google Maps API key is not configured in environment variables. Add <code>VITE_GOOGLE_MAPS_API_KEY</code> in Vercel settings to render the interactive map tiles.
+          </div>
+        )}
         <div className="overflow-hidden rounded-2xl border border-emerald-100/80 shadow-sm">
-          <LoadScript googleMapsApiKey={import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string}>
+          <LoadScript googleMapsApiKey={apiKey}>
             <GoogleMap mapContainerStyle={containerStyle} center={vjtiLocation} zoom={16}>
               {zoneDividerLines.map((path, index) => (
                 <Polyline

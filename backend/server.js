@@ -92,7 +92,9 @@ const uploadRoute = require("./routes/upload");
 const { createAdminNotificationIfCritical, isAttentionLevel } = require("./utils/notifications");
 const localAdminNotificationStore = require("./utils/localAdminNotificationStore");
 
-dns.setServers(config.dnsServers);
+if (process.env.DNS_SERVERS) {
+  dns.setServers(config.dnsServers);
+}
 
 // MongoDB Connection
 mongoose.connect(config.mongoUri)
