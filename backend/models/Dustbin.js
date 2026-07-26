@@ -16,6 +16,6 @@ const DustbinSchema = new mongoose.Schema({
     type: String,
     default: "Just now",
   },
-}, { bufferCommands: false });
+});
 
 module.exports = mongoose.model("Dustbin", DustbinSchema);

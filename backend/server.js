@@ -92,8 +92,6 @@ const uploadRoute = require("./routes/upload");
 const { createAdminNotificationIfCritical, isAttentionLevel } = require("./utils/notifications");
 const localAdminNotificationStore = require("./utils/localAdminNotificationStore");
 
-mongoose.set("bufferCommands", false);
-
 try {
   dns.setServers(config.dnsServers);
 } catch (dnsErr) {

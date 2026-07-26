@@ -23,7 +23,7 @@ const DustbinHistorySchema = new mongoose.Schema(
       default: "upload",
     },
   },
-  { timestamps: true, bufferCommands: false },
+  { timestamps: true },
 );
 
 module.exports = mongoose.model("DustbinHistory", DustbinHistorySchema);

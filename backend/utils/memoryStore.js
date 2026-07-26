@@ -26,8 +26,11 @@ function updateBinsFromDb(dbBins) {
     const idx = binsStore.findIndex((b) => b.id === dbBin.id);
     if (idx === -1) {
       binsStore.push(dbBin);
-    } else if (binsStore[idx].updatedAt !== "Just now" || dbBin.updatedAt === "Just now") {
-      binsStore[idx] = dbBin;
+    } else {
+      binsStore[idx] = {
+        ...binsStore[idx],
+        ...dbBin,
+      };
     }
   });
 }
