@@ -27,12 +27,15 @@ async function createAdminNotificationIfCritical({ previousBin, updatedBin, sour
     message,
   };
 
-  if (isMongoConnected()) {
-    await AdminNotification.create(notification);
-    return;
-  }
-
   localAdminNotificationStore.createNotification(notification);
+
+  if (isMongoConnected()) {
+    try {
+      await AdminNotification.create(notification);
+    } catch (err) {
+      console.warn("MongoDB AdminNotification create notice:", err.message);
+    }
+  }
 }
 
 module.exports = {

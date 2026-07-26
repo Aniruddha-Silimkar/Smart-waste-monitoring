@@ -193,27 +193,28 @@ function createNotificationPayload(bin, source = "current-status") {
 }
 
 async function getCurrentAdminNotifications(limit) {
-  const attentionBins = (await Dustbin.find().lean()).filter((bin) => isAttentionLevel(bin.level));
-  const notifications = [];
-
-  for (const bin of attentionBins) {
-    const existing = await AdminNotification.findOne({
-      dustbinId: bin.id,
-      level: bin.level,
-      percentage: Number(bin.percentage) || 0,
-    }).sort({ createdAt: -1 });
-
-    if (existing) {
-      notifications.push(existing.toObject());
-      continue;
+  let dbNotifications = [];
+  try {
+    if (isMongoConnected()) {
+      dbNotifications = await AdminNotification.find().sort({ createdAt: -1 }).limit(limit).lean();
     }
-
-    const created = await AdminNotification.create(createNotificationPayload(bin));
-    notifications.push(created.toObject());
+  } catch (err) {
+    console.warn("MongoDB getCurrentAdminNotifications notice:", err.message);
   }
 
-  const sorted = notifications.sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  const localNotifications = localAdminNotificationStore.listNotifications(limit);
+  const combined = [...dbNotifications, ...localNotifications];
+  const uniqueMap = new Map();
+
+  combined.forEach((item) => {
+    const key = item._id || `${item.dustbinId}-${item.level}-${item.percentage}`;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, item);
+    }
+  });
+
+  const sorted = Array.from(uniqueMap.values()).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
   return {

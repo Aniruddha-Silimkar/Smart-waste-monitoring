@@ -4,17 +4,48 @@ const crypto = require("crypto");
 
 const DATA_FILE = path.join(__dirname, "..", "local-admin-notifications.json");
 
+const defaultNotifications = [
+  {
+    _id: "init-notif-6",
+    dustbinId: 6,
+    level: "overflowing",
+    percentage: 100,
+    lat: 19.0239,
+    lng: 72.8568,
+    source: "manual",
+    message: "Dustbin DB-006 is overflowing at 100%",
+    isRead: false,
+    createdAt: new Date(Date.now() - 60000).toISOString(),
+    updatedAt: new Date(Date.now() - 60000).toISOString(),
+  },
+  {
+    _id: "init-notif-3",
+    dustbinId: 3,
+    level: "full",
+    percentage: 95,
+    lat: 19.0197,
+    lng: 72.8559,
+    source: "manual",
+    message: "Dustbin DB-003 is full at 95%",
+    isRead: false,
+    createdAt: new Date(Date.now() - 300000).toISOString(),
+    updatedAt: new Date(Date.now() - 300000).toISOString(),
+  },
+];
+
 function readNotifications() {
   try {
     if (!fs.existsSync(DATA_FILE)) {
-      return [];
+      writeNotifications(defaultNotifications);
+      return defaultNotifications;
     }
 
     const raw = fs.readFileSync(DATA_FILE, "utf8");
-    return raw ? JSON.parse(raw) : [];
+    const parsed = raw ? JSON.parse(raw) : [];
+    return parsed.length > 0 ? parsed : defaultNotifications;
   } catch (error) {
     console.error("Local notification store read error:", error);
-    return [];
+    return defaultNotifications;
   }
 }
 
