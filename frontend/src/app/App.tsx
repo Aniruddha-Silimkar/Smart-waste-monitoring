@@ -96,24 +96,24 @@ export default function App() {
             )}
           </TabsList>
 
-          <TabsContent value="dashboard" className="mt-1">
+          <TabsContent value="dashboard" forceMount className="mt-1 data-[state=inactive]:hidden">
             <StatisticsPanel />
           </TabsContent>
 
-          <TabsContent value="upload" className="mt-1">
+          <TabsContent value="upload" forceMount className="mt-1 data-[state=inactive]:hidden">
             <div className="mx-auto max-w-2xl">
               <UploadSection user={user} onOpenAuth={() => setIsAuthOpen(true)} />
             </div>
           </TabsContent>
 
-          <TabsContent value="map" className="mt-1">
+          <TabsContent value="map" forceMount className="mt-1 data-[state=inactive]:hidden">
             <div className="mx-auto max-w-5xl">
               <VJTIMap />
             </div>
           </TabsContent>
 
           {user?.role === "admin" && token && (
-            <TabsContent value="notifications" className="mt-1">
+            <TabsContent value="notifications" forceMount className="mt-1 data-[state=inactive]:hidden">
               <div className="mx-auto max-w-5xl">
                 <AdminNotificationSection token={token} />
               </div>
