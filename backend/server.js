@@ -134,7 +134,7 @@ async function seedIfEmpty() {
 }
 
 // MongoDB Connection
-mongoose.connect(config.mongoUri)
+mongoose.connect(config.mongoUri, { serverSelectionTimeoutMS: 5000 })
 .then(() => {
   console.log("MongoDB Connected");
   seedIfEmpty();

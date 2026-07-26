@@ -53,8 +53,19 @@ router.post("/", upload.single("image"), async (req, res) => {
       }
     }
 
-    const existingBin = await Dustbin.findOne({ id: parsedDustbinId });
-    const previousBin = existingBin ? existingBin.toObject() : {
+    const mongoose = require("mongoose");
+    const isMongoConnected = () => mongoose.connection.readyState === 1;
+
+    let updated = {
+      id: parsedDustbinId,
+      lat: 19.0222,
+      lng: 72.8561,
+      level,
+      percentage,
+      updatedAt: "Just now",
+    };
+
+    let previousBin = {
       id: parsedDustbinId,
       lat: 19.0222,
       lng: 72.8561,
@@ -62,31 +73,45 @@ router.post("/", upload.single("image"), async (req, res) => {
       percentage: 0,
     };
 
-    const updated = await Dustbin.findOneAndUpdate(
-      { id: parsedDustbinId },
-      {
-        id: parsedDustbinId,
-        lat: previousBin.lat || 19.0222,
-        lng: previousBin.lng || 72.8561,
-        level,
-        percentage,
-        updatedAt: "Just now",
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
+    if (isMongoConnected()) {
+      try {
+        const existingBin = await Dustbin.findOne({ id: parsedDustbinId });
+        if (existingBin) {
+          previousBin = existingBin.toObject();
+        }
 
-    await DustbinHistory.create({
-      dustbinId: parsedDustbinId,
-      level,
-      percentage,
-      source: "upload",
-    });
+        const dbUpdated = await Dustbin.findOneAndUpdate(
+          { id: parsedDustbinId },
+          {
+            id: parsedDustbinId,
+            lat: previousBin.lat || 19.0222,
+            lng: previousBin.lng || 72.8561,
+            level,
+            percentage,
+            updatedAt: "Just now",
+          },
+          { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+        if (dbUpdated) {
+          updated = dbUpdated.toObject();
+        }
 
-    await createAdminNotificationIfCritical({
-      previousBin,
-      updatedBin: updated,
-      source: "upload",
-    });
+        await DustbinHistory.create({
+          dustbinId: parsedDustbinId,
+          level,
+          percentage,
+          source: "upload",
+        });
+
+        await createAdminNotificationIfCritical({
+          previousBin,
+          updatedBin: updated,
+          source: "upload",
+        });
+      } catch (dbErr) {
+        console.warn("MongoDB database write notice:", dbErr.message);
+      }
+    }
 
     if (filePath && fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
