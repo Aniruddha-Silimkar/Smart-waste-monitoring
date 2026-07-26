@@ -35,6 +35,25 @@ function updateBinsFromDb(dbBins) {
   });
 }
 
+function updateHistoryFromDb(dbHistory) {
+  if (!Array.isArray(dbHistory) || dbHistory.length === 0) return;
+  const combined = [...dbHistory, ...historyStore];
+  const unique = [];
+  const seen = new Set();
+
+  combined.forEach((item) => {
+    const timeKey = new Date(item.createdAt).getTime();
+    const key = `${item.dustbinId}-${timeKey}-${item.percentage}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(item);
+    }
+  });
+
+  unique.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  historyStore = unique;
+}
+
 function updateBin({ id, level, percentage, lat, lng }) {
   const parsedId = Number(id);
   const parsedPct = Number(percentage);
@@ -162,11 +181,19 @@ function getStats() {
     const status = pct >= 90 ? "critical" : pct >= 70 ? "attention" : "normal";
     const message = pct >= 90 ? "Critical level" : `${pct}% full`;
 
+    const timeAgoMs = Math.max(0, Date.now() - new Date(entry.createdAt).getTime());
+    let timeStr = "Just now";
+    if (timeAgoMs > 3600000) {
+      timeStr = `${Math.floor(timeAgoMs / 3600000)}h ago`;
+    } else if (timeAgoMs > 60000) {
+      timeStr = `${Math.floor(timeAgoMs / 60000)}m ago`;
+    }
+
     return {
       dustbinId: `DB-${String(entry.dustbinId).padStart(3, "0")}`,
       status,
       message,
-      time: new Date(entry.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      time: timeStr,
     };
   });
 
@@ -188,6 +215,7 @@ module.exports = {
   defaultBins,
   getBins,
   updateBinsFromDb,
+  updateHistoryFromDb,
   updateBin,
   getStats,
 };

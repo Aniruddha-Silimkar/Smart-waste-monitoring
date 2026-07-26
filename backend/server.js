@@ -355,9 +355,16 @@ app.patch("/admin/notifications/read-all", requireAdmin, async (req, res) => {
 app.get("/dashboard-stats", async (req, res) => {
   try {
     if (mongoose.connection.readyState === 1) {
-      const bins = await Dustbin.find().lean();
+      const [bins, history] = await Promise.all([
+        Dustbin.find().lean(),
+        DustbinHistory.find().sort({ createdAt: -1 }).limit(50).lean(),
+      ]);
+
       if (bins && bins.length > 0) {
         memoryStore.updateBinsFromDb(bins);
+      }
+      if (history && history.length > 0) {
+        memoryStore.updateHistoryFromDb(history);
       }
     }
   } catch (err) {
