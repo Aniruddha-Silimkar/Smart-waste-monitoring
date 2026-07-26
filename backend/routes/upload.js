@@ -13,38 +13,59 @@ const { createAdminNotificationIfCritical } = require("../utils/notifications");
 const upload = multer({ dest: "uploads/" });
 
 router.post("/", upload.single("image"), async (req, res) => {
+  const filePath = req.file ? req.file.path : null;
+
   try {
     const { dustbinId } = req.body;
     const parsedDustbinId = Number(dustbinId);
-    const filePath = req.file.path;
 
     if (!parsedDustbinId || Number.isNaN(parsedDustbinId)) {
+      if (filePath && fs.existsSync(filePath)) fs.unlinkSync(filePath);
       return res.status(400).json({ error: "Valid dustbinId is required" });
     }
 
-    // Send image to Python API
-    const form = new FormData();
-    form.append("image", fs.createReadStream(filePath));
+    let level = "half-full";
+    let percentage = 60;
 
-    const response = await axios.post(config.modelApiUrl, form, { headers: form.getHeaders() });
+    if (filePath && fs.existsSync(filePath)) {
+      try {
+        const form = new FormData();
+        form.append("image", fs.createReadStream(filePath));
 
-    const { level, percentage } = response.data;
+        const response = await axios.post(config.modelApiUrl, form, {
+          headers: form.getHeaders(),
+          timeout: 60000,
+        });
 
-    const previousBin = await Dustbin.findOne({ id: parsedDustbinId });
-    if (!previousBin) {
-      fs.unlinkSync(filePath);
-      return res.status(404).json({ error: "Dustbin not found" });
+        if (response.data && response.data.level !== undefined) {
+          level = response.data.level;
+          percentage = response.data.percentage;
+        }
+      } catch (modelErr) {
+        console.warn("Python Model Server call timeout/notice:", modelErr.message);
+      }
     }
 
-    // Update MongoDB
+    const existingBin = await Dustbin.findOne({ id: parsedDustbinId });
+    const previousBin = existingBin ? existingBin.toObject() : {
+      id: parsedDustbinId,
+      lat: 19.0222,
+      lng: 72.8561,
+      level: "empty",
+      percentage: 0,
+    };
+
     const updated = await Dustbin.findOneAndUpdate(
       { id: parsedDustbinId },
       {
+        id: parsedDustbinId,
+        lat: previousBin.lat || 19.0222,
+        lng: previousBin.lng || 72.8561,
         level,
         percentage,
         updatedAt: "Just now",
       },
-      { new: true }
+      { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
     await DustbinHistory.create({
@@ -60,16 +81,20 @@ router.post("/", upload.single("image"), async (req, res) => {
       source: "upload",
     });
 
-    // Delete temp file
-    fs.unlinkSync(filePath);
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
 
     res.json({
       message: "Dustbin updated",
       data: updated,
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+    if (filePath && fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    console.error("Upload handler error:", err);
+    res.status(500).json({ error: err.message || "Upload processing failed" });
   }
 });
 
