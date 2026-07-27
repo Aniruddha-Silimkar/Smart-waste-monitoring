@@ -77,7 +77,11 @@ router.post("/", upload.single("image"), async (req, res) => {
           timeout: 10000,
         });
 
-        if (response.data && response.data.level && response.data.level !== "empty") {
+        if (
+          response.data &&
+          response.data.level &&
+          !(response.data.level === "half-full" && Number(response.data.percentage) === 60)
+        ) {
           level = response.data.level;
           percentage = response.data.percentage;
         }
