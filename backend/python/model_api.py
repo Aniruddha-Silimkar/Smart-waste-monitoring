@@ -68,6 +68,9 @@ def predict_fill(image_path):
         return "empty", 0, False
 
 
+import tempfile
+import uuid
+
 # API endpoint
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -75,14 +78,24 @@ def predict():
         return jsonify({"error": "No image file provided"}), 400
 
     file = request.files["image"]
-    file_path = "temp.jpg"
-    file.save(file_path)
+    temp_filename = f"upload_{uuid.uuid4().hex}.jpg"
+    file_path = os.path.join(tempfile.gettempdir(), temp_filename)
+
+    level = "empty"
+    percentage = 0
+    cleaning_required = False
 
     try:
+        file.save(file_path)
         level, percentage, cleaning_required = predict_fill(file_path)
+    except Exception as err:
+        print(f"Prediction route exception: {err}")
     finally:
         if os.path.exists(file_path):
-            os.remove(file_path)
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
 
     return jsonify({
         "level": level,

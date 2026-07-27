@@ -31,8 +31,8 @@ router.post("/", upload.single("image"), async (req, res) => {
       return res.status(400).json({ error: "Valid dustbinId is required" });
     }
 
-    let level = "half-full";
-    let percentage = 60;
+    let level = "empty";
+    let percentage = 0;
 
     if (filePath && fs.existsSync(filePath)) {
       try {
