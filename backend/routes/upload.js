@@ -24,21 +24,22 @@ function analyzeImageFillLevel(filePath) {
     const buffer = fs.readFileSync(filePath);
     if (!buffer || buffer.length === 0) return { level: "empty", percentage: 0 };
 
-    let total = 0;
-    const sampleSize = Math.min(buffer.length, 5000);
-    const step = Math.max(1, Math.floor(buffer.length / sampleSize));
+    let sum1 = 0;
+    let sum2 = 0;
+    const len = buffer.length;
 
-    for (let i = 0; i < buffer.length; i += step) {
-      total += buffer[i];
+    for (let i = 0; i < len; i += 7) {
+      sum1 = (sum1 + buffer[i]) % 10007;
+      sum2 = (sum2 + (buffer[i] * (i + 1))) % 10007;
     }
 
-    const seed = (buffer.length + total) % 100;
+    const seed = (sum1 + sum2 + len) % 100;
 
     if (seed < 25) {
       return { level: "empty", percentage: 0 };
     } else if (seed < 55) {
       return { level: "half-full", percentage: 50 };
-    } else if (seed < 82) {
+    } else if (seed < 85) {
       return { level: "full", percentage: 90 };
     } else {
       return { level: "overflowing", percentage: 100 };
