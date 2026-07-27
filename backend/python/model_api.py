@@ -19,7 +19,10 @@ client = InferenceHTTPClient(
 
 FILL_MAP = {
     "empty": 0,
+    "half": 50,
     "half-full": 50,
+    "half_full": 50,
+    "half full": 50,
     "full": 90,
     "overflowing": 100,
     "null": 0
@@ -39,21 +42,30 @@ def predict_fill(image_path):
         if len(predictions) == 0:
             return "empty", 0, False
 
-        best_prediction = max(predictions, key=lambda x: x["confidence"])
+        best_prediction = max(predictions, key=lambda x: x.get("confidence", 0))
 
-        predicted_class = best_prediction["class"]
-        confidence = best_prediction["confidence"]
+        predicted_class = str(best_prediction.get("class", "")).lower().strip()
+        confidence = float(best_prediction.get("confidence", 0))
 
-        if confidence < 0.5:
+        if confidence < 0.2:
             return "empty", 0, False
 
-        fill_percentage = FILL_MAP.get(predicted_class, 0)
+        fill_percentage = FILL_MAP.get(predicted_class, 50)
+
+        standard_class = "empty"
+        if fill_percentage >= 100:
+            standard_class = "overflowing"
+        elif fill_percentage >= 90:
+            standard_class = "full"
+        elif fill_percentage >= 50:
+            standard_class = "half-full"
+
         cleaning_required = fill_percentage >= 90
 
-        return predicted_class, fill_percentage, cleaning_required
+        return standard_class, fill_percentage, cleaning_required
     except Exception as e:
         print(f"Roboflow inference error: {e}")
-        return "half-full", 60, False
+        return "empty", 0, False
 
 
 # API endpoint
