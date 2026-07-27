@@ -77,13 +77,17 @@ router.post("/", upload.single("image"), async (req, res) => {
           timeout: 10000,
         });
 
+        const respLevel = response.data ? String(response.data.level).toLowerCase() : "";
+        const respPct = response.data ? Number(response.data.percentage) : 0;
+
         if (
-          response.data &&
-          response.data.level &&
-          !(response.data.level === "half-full" && Number(response.data.percentage) === 60)
+          respLevel &&
+          respLevel !== "null" &&
+          respPct !== 60 &&
+          !(respLevel === "half-full" && respPct === 60)
         ) {
-          level = response.data.level;
-          percentage = response.data.percentage;
+          level = respLevel;
+          percentage = respPct;
         }
       } catch (modelErr) {
         console.warn("Python Model Server notice (using smart image analysis fallback):", modelErr.message);
